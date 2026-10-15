@@ -1,0 +1,1820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@@PILOT_NAME@@ panel</title>
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('pilot-theme'); } catch (e) { t = null; }
+    if (t !== 'light' && t !== 'dark') {
+      t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+    var d = null;
+    try { d = localStorage.getItem('pilot-density'); } catch (e) { d = null; }
+    document.documentElement.setAttribute('data-density', d === 'comfy' ? 'comfy' : 'compact');
+  })();
+</script>
+<style>
+/*@@PILOT_FONTS@@*/
+
+/* Design tokens */
+:root, :root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f7f9; --surface: #ffffff; --surface-2: #eef1f5; --surface-3: #e4e8ee;
+  --border: #e2e6ec; --border-strong: #c7cfda;
+  --text: #0f172a; --text-muted: #475569; --text-subtle: #5b6a7e;
+  --primary: #2563eb; --primary-hover: #1d4ed8; --on-primary: #ffffff; --link: #1d4ed8; --ring: #2563eb;
+  --ok-text: #166534; --ok-dot: #16a34a; --ok-soft: #ecfdf3;
+  --warn-text: #92400e; --warn-dot: #d97706; --warn-soft: #fff7e6;
+  --crit-text: #b91c1c; --crit-dot: #dc2626; --crit-soft: #fef1f1;
+  --info-text: #1d4ed8; --info-dot: #2563eb; --info-soft: #eef4ff;
+  --unknown-text: #475569; --unknown-dot: #7c8ba0; --unknown-soft: #f1f4f8;
+  --chart-1: #2563eb; --chart-2: #0d9488; --chart-3: #7c3aed; --chart-4: #db2777; --chart-5: #a16207;
+  --shadow-pop: 0 4px 16px rgb(15 23 42 / 0.12); --shadow-dialog: 0 12px 40px rgb(15 23 42 / 0.18);
+  --overlay: rgb(15 23 42 / 0.4);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b111b; --surface: #111926; --surface-2: #172131; --surface-3: #1e2a3d;
+  --border: #223047; --border-strong: #33445e;
+  --text: #e6eaf0; --text-muted: #a6b0bf; --text-subtle: #8a96a8;
+  --primary: #2563eb; --primary-hover: #1d4ed8; --on-primary: #ffffff; --link: #60a5fa; --ring: #60a5fa;
+  --ok-text: #4ade80; --ok-dot: #22c55e; --ok-soft: #12291f;
+  --warn-text: #fbbf24; --warn-dot: #f59e0b; --warn-soft: #2b2413;
+  --crit-text: #f87171; --crit-dot: #ef4444; --crit-soft: #2e1719;
+  --info-text: #60a5fa; --info-dot: #3b82f6; --info-soft: #15233d;
+  --unknown-text: #a6b0bf; --unknown-dot: #64748b; --unknown-soft: #1c2533;
+  --chart-1: #3b82f6; --chart-2: #0d9488; --chart-3: #8b5cf6; --chart-4: #db2777; --chart-5: #b7791f;
+  --shadow-pop: 0 4px 16px rgb(0 0 0 / 0.45); --shadow-dialog: 0 12px 40px rgb(0 0 0 / 0.55);
+  --overlay: rgb(0 0 0 / 0.6);
+}
+:root {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
+  --wait-soft: color-mix(in srgb, var(--chart-3) 14%, var(--surface));
+  --wait-text: color-mix(in srgb, var(--chart-3) 85%, var(--text));
+  --ans-soft: color-mix(in srgb, var(--chart-2) 14%, var(--surface));
+  --ans-text: color-mix(in srgb, var(--chart-2) 65%, var(--text));
+  --row: 30px; --pad: 8px; --gap: 12px;
+}
+:root[data-theme='dark'] {
+  --wait-text: color-mix(in srgb, var(--chart-3) 60%, var(--text));
+  --ans-text: color-mix(in srgb, var(--chart-2) 60%, var(--text));
+}
+:root[data-density='comfy'] { --row: 38px; --pad: 12px; --gap: 16px; }
+
+@supports not selector(::-webkit-scrollbar) { * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; } }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: var(--border-strong); border: 3px solid transparent; background-clip: padding-box; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--text-subtle); }
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 13px; line-height: 18px;
+  font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; overflow: hidden; }
+h1, h2, h3 { margin: 0; font-size: inherit; font-weight: inherit; letter-spacing: -0.01em; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; margin: 0; text-align: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+::selection { background: var(--info-soft); }
+[hidden] { display: none !important; }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+code { background: var(--surface-2); border-radius: 3px; padding: 0 3px; overflow-wrap: anywhere; }
+.ic { width: 15px; height: 15px; flex-shrink: 0; display: block; }
+.subtle { color: var(--text-subtle); }
+.col-flex { display: flex; flex-direction: column; gap: var(--gap); }
+
+/* Status colours */
+.st-done     { --c: var(--ok-dot);      --bs: var(--ok-soft);      --bt: var(--ok-text); }
+.st-code     { --c: var(--info-dot);    --bs: var(--info-soft);    --bt: var(--info-text); }
+.st-part     { --c: var(--chart-2);     --bs: var(--ans-soft);     --bt: var(--ans-text); }
+.st-answered { --c: var(--chart-2);     --bs: var(--ans-soft);     --bt: var(--ans-text); }
+.st-wip      { --c: var(--warn-dot);    --bs: var(--warn-soft);    --bt: var(--warn-text); }
+.st-wait     { --c: var(--chart-3);     --bs: var(--wait-soft);    --bt: var(--wait-text); }
+.st-todo, .st-dropped, .st-other { --c: var(--unknown-dot); --bs: var(--unknown-soft); --bt: var(--unknown-text); }
+.st-crit     { --c: var(--crit-dot);    --bs: var(--crit-soft);    --bt: var(--crit-text); }
+.n-open    { --c: var(--info-dot); --bs: var(--info-soft); --bt: var(--info-text); }
+.n-doing   { --c: var(--warn-dot); --bs: var(--warn-soft); --bt: var(--warn-text); }
+.n-waiting { --c: var(--chart-3);  --bs: var(--wait-soft); --bt: var(--wait-text); }
+.n-done    { --c: var(--ok-dot);   --bs: var(--ok-soft);   --bt: var(--ok-text); }
+.n-wontdo  { --c: var(--unknown-dot); --bs: var(--unknown-soft); --bt: var(--unknown-text); }
+
+/* Shell */
+.app { display: flex; height: 100%; overflow: hidden; }
+.side { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--surface); border-right: 1px solid var(--border); transition: width 140ms ease-out; }
+.app.rail .side { width: 52px; }
+.app.rail .side .hide-rail { display: none; }
+.side-head { height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; border-bottom: 1px solid var(--border); }
+.mark { width: 22px; height: 22px; flex-shrink: 0; }
+.brand { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+.brand small { font-weight: 500; color: var(--text-subtle); font-size: 12px; margin-left: 5px; }
+.nav { flex: 1; overflow-y: auto; padding: 10px 6px; display: flex; flex-direction: column; gap: 12px; }
+.nav-group { display: flex; flex-direction: column; gap: 1px; }
+.nav-label { padding: 0 10px 3px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-subtle); white-space: nowrap; }
+.nav-item { position: relative; display: flex; align-items: center; gap: 9px; width: 100%; height: 32px; padding: 0 9px; border-radius: 6px; color: var(--text-muted); white-space: nowrap; }
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item[aria-current='page'] { background: var(--surface-2); color: var(--text); font-weight: 500; }
+.nav-item[aria-current='page']::before { content: ''; position: absolute; top: 6px; bottom: 6px; left: 0; width: 2px; border-radius: 999px; background: var(--primary); }
+.nav-item .ic { width: 17px; height: 17px; }
+.nav-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.nav-badge { border-radius: 4px; background: var(--surface-3); color: var(--text-muted); padding: 0 5px; font-size: 11px; line-height: 16px; font-weight: 600; }
+.nav-badge.warn { background: var(--warn-soft); color: var(--warn-text); }
+.side-foot { border-top: 1px solid var(--border); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.save-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); min-width: 0; }
+.save-line span:not(.dot) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 999px; background: var(--c, var(--unknown-dot)); flex-shrink: 0; display: inline-block; }
+.dot.pulse { animation: pulse 2s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 50%, transparent); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .dot.pulse { animation: none; } * { transition: none !important; } }
+
+.col-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.top { height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.top-title { min-width: 0; display: flex; flex-direction: column; flex: 0 1 auto; }
+.top-title strong { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.top-title span { font-size: 11.5px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search { flex: 1 1 260px; max-width: 460px; margin-left: auto; position: relative; }
+.search input { width: 100%; height: 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); padding: 0 34px 0 30px; outline: none; }
+.search input:focus { border-color: var(--ring); background: var(--surface); }
+.search .ic { position: absolute; left: 9px; top: 9px; color: var(--text-subtle); }
+.search kbd { position: absolute; right: 8px; top: 7px; }
+kbd { font-family: var(--font-mono); font-size: 10.5px; line-height: 16px; padding: 0 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--text-muted); background: var(--surface); }
+.top-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.btn-icon { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--text-muted); flex-shrink: 0; }
+.btn-icon:hover { background: var(--surface-2); color: var(--text); }
+.btn-icon.sm { width: 24px; height: 24px; }
+.btn-icon.sm .ic { width: 13px; height: 13px; }
+.main { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 40px; }
+.page { max-width: 1760px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--gap); }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-weight: 500; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.btn.primary:hover { background: var(--primary-hover); }
+.btn.ghost { border-color: transparent; background: none; color: var(--text-muted); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+.btn.danger { color: var(--crit-text); }
+.btn.sm { height: 24px; padding: 0 8px; font-size: 12px; }
+.btn .ic { width: 14px; height: 14px; }
+.input, .select, .textarea { height: 28px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); padding: 0 8px; outline: none; min-width: 0; }
+.input:focus, .select:focus, .textarea:focus { border-color: var(--ring); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 25%, transparent); }
+.textarea { height: auto; min-height: 64px; padding: 6px 8px; resize: vertical; line-height: 18px; width: 100%; }
+.select { padding-right: 4px; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; min-width: 0; display: flex; flex-direction: column; }
+.card-h { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); min-height: 38px; }
+.card-h h2 { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.card-h .sub { font-size: 12px; color: var(--text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.spacer { flex: 1; }
+.card-b { padding: 8px 12px; }
+.card-b.flush { padding: 0; }
+.card-f { padding: 6px 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-subtle); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.link { color: var(--link); font-weight: 500; white-space: nowrap; font-size: 12px; }
+.link:hover { text-decoration: underline; }
+.grid { display: grid; gap: var(--gap); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g21 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+@media (max-width: 1280px) { .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .g3, .g21 { grid-template-columns: minmax(0, 1fr); } }
+
+/* Tiles */
+.tiles { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(136px, 1fr)); }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px 10px; display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left; }
+button.tile:hover { border-color: var(--border-strong); background: color-mix(in srgb, var(--surface-2) 50%, var(--surface)); }
+.tile-l { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-subtle); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tile-v { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: baseline; gap: 5px; white-space: nowrap; overflow: hidden; }
+.tile-v small { font-size: 12px; font-weight: 500; color: var(--text-subtle); letter-spacing: 0; }
+.tile-s { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Bars */
+.bar { display: flex; height: 6px; border-radius: 999px; overflow: hidden; background: var(--surface-3); gap: 1px; flex-shrink: 0; }
+.bar > i { display: block; background: var(--c); min-width: 2px; }
+.bar.tall { height: 9px; border-radius: 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11.5px; color: var(--text-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Pills, chips, selects */
+.pill { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--bs); color: var(--bt); font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.pill::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: var(--c); }
+.psel { appearance: none; -webkit-appearance: none; height: 20px; padding: 0 18px 0 8px; border-radius: 999px; border: 1px solid transparent; background: var(--bs) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%237c8ba0' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 5px center; color: var(--bt); font-size: 11.5px; font-weight: 500; cursor: pointer; max-width: 160px; }
+.psel:hover { border-color: color-mix(in srgb, var(--c) 45%, transparent); }
+.psel.mine { box-shadow: inset 0 0 0 1.5px var(--primary); }
+.psel option { background: var(--surface); color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.chip .ic { width: 13px; height: 13px; }
+.chip:hover { border-color: var(--border-strong); color: var(--text); }
+.chip[aria-pressed='true'] { background: var(--text); color: var(--surface); border-color: var(--text); }
+.chip .cnt { font-size: 11px; opacity: 0.75; }
+.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+.seg button { height: 26px; padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--border-strong); }
+.seg button[aria-pressed='true'] { background: var(--surface-3); color: var(--text); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.tag { display: inline-block; padding: 0 5px; border-radius: 4px; background: var(--surface-2); color: var(--text-muted); font-size: 11px; line-height: 16px; white-space: nowrap; }
+.prio { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 18px; border-radius: 4px; font-size: 10.5px; font-weight: 700; font-family: var(--font-mono); padding: 0 4px; flex-shrink: 0; }
+.prio.p0 { background: var(--crit-soft); color: var(--crit-text); }
+.prio.p1 { background: var(--warn-soft); color: var(--warn-text); }
+.prio.p2 { background: var(--info-soft); color: var(--info-text); }
+.prio.p3 { background: var(--unknown-soft); color: var(--unknown-text); }
+.type { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; white-space: nowrap; color: var(--tc); flex-shrink: 0; }
+.type .ic { width: 13px; height: 13px; }
+.t-issue { --tc: var(--crit-text); } .t-feature { --tc: var(--info-text); } .t-question { --tc: var(--wait-text); }
+.t-idea { --tc: var(--chart-5); } .t-note { --tc: var(--text-muted); } .t-task { --tc: var(--ok-text); }
+
+/* Tables */
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-subtle); padding: 0 var(--pad); height: 28px; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.tbl th.sortable { cursor: pointer; user-select: none; }
+.tbl th.sortable:hover { color: var(--text); }
+.tbl td { padding: 4px var(--pad); height: var(--row); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+.tbl tr.is-done td.t-main { color: var(--text-subtle); }
+.tbl td.t-main { min-width: 260px; }
+.tbl td.w-state { max-width: 460px; color: var(--text-muted); font-size: 12px; }
+.flash td, .li.flash { animation: flash 1.8s ease-out; }
+@keyframes flash { 0%, 35% { background: var(--info-soft); } 100% { background: transparent; } }
+.tbl tr.drop-before td { box-shadow: inset 0 2px 0 var(--primary); }
+.tbl tr.drop-after td { box-shadow: inset 0 -2px 0 var(--primary); }
+.tbl tr.dragging td { opacity: 0.4; }
+.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+.clamp.open { -webkit-line-clamp: unset; display: block; }
+.ttl { font-weight: 500; }
+.id { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-subtle); white-space: nowrap; }
+.grip { cursor: grab; color: var(--text-subtle); display: inline-flex; padding: 2px; border-radius: 4px; }
+.grip:hover { background: var(--surface-3); color: var(--text); }
+.chk { width: 15px; height: 15px; accent-color: var(--ok-dot); cursor: pointer; margin: 0; vertical-align: middle; flex-shrink: 0; }
+.row-actions { display: flex; gap: 0; opacity: 0.3; justify-content: flex-end; }
+tr:hover .row-actions, tr:focus-within .row-actions { opacity: 1; }
+.empty { padding: 22px 12px; text-align: center; color: var(--text-subtle); }
+
+/* Lists */
+.list { display: flex; flex-direction: column; }
+.li { display: flex; align-items: center; gap: 8px; padding: 4px 12px; min-height: var(--row); border-bottom: 1px solid var(--border); min-width: 0; width: 100%; text-align: left; }
+.li:last-child { border-bottom: 0; }
+.li .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.li.wrap { align-items: flex-start; }
+.li.wrap .grow { white-space: normal; }
+.li:hover { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+.when { font-size: 11.5px; color: var(--text-subtle); white-space: nowrap; font-family: var(--font-mono); }
+
+/* Requirement matrix */
+.matrix { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 4px; }
+.cell { border-radius: 5px; background: var(--bs); color: var(--bt); border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); padding: 4px 5px; font-size: 11px; line-height: 13px; min-height: 42px; display: flex; flex-direction: column; gap: 2px; text-align: left; overflow: hidden; }
+.cell b { font-family: var(--font-mono); font-size: 11px; }
+.cell span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--text-muted); }
+.cell:hover { border-color: var(--c); }
+
+/* Phases */
+.phase-row { width: 100%; text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 5px; }
+.phase-row:last-child { border-bottom: 0; }
+.phase-row:hover { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+.phase-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.phase-top .name { font-weight: 600; white-space: nowrap; }
+.phase-top .meta { font-size: 12px; color: var(--text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.phase-top .count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+/* Banner */
+.banner { display: flex; align-items: flex-start; gap: 8px; padding: 7px 12px; border-radius: 8px; background: var(--bs); color: var(--bt); border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); font-size: 12.5px; }
+.banner .ic { margin-top: 2px; }
+.banner .grow { flex: 1; }
+
+/* Notebook */
+.qadd { display: flex; gap: 6px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.qadd .input.big { flex: 1 1 320px; height: 32px; font-size: 13.5px; }
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); border-bottom: 1px solid var(--border); }
+.editor .fields { display: flex; flex-direction: column; gap: 6px; }
+.editor label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-subtle); display: flex; flex-direction: column; gap: 3px; }
+.editor label > * { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); font-size: 13px; }
+.editor .side-f { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-content: start; }
+.editor .full { grid-column: 1 / -1; }
+.editor .acts { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 760px) { .editor { grid-template-columns: minmax(0, 1fr); } }
+.board { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 10px; padding: 10px 12px 12px; overflow-x: auto; }
+.col { background: var(--surface-2); border-radius: 8px; display: flex; flex-direction: column; min-height: 160px; }
+.col.over { outline: 2px dashed var(--primary); outline-offset: -2px; }
+.col-h { display: flex; align-items: center; gap: 6px; padding: 7px 10px; font-weight: 600; font-size: 12px; }
+.col-b { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; flex: 1; }
+.ncard { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; cursor: grab; }
+.ncard:hover { border-color: var(--border-strong); }
+.ncard.sel { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.ncard .t { font-weight: 500; overflow-wrap: anywhere; }
+.ncard .m { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--text-subtle); }
+.kanban { grid-template-columns: repeat(6, minmax(178px, 1fr)); gap: 8px; align-items: start; }
+.kanban .col { max-height: calc(100vh - 230px); }
+.kanban .col-h { position: sticky; top: 0; }
+.kanban .col-b { overflow-y: auto; }
+.kanban .col-h .dot { background: var(--c); }
+.kanban .ncard .t { font-size: 12.5px; line-height: 17px; }
+.kanban .ncard.sel { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); box-shadow: none; }
+.ncard:active { cursor: grabbing; }
+.body-preview { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 620px; }
+
+/* Branch cards */
+.br { padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+.br:last-child { border-bottom: 0; }
+.br-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.br-name { font-family: var(--font-mono); font-weight: 600; font-size: 12.5px; }
+details > summary { cursor: pointer; color: var(--link); font-size: 12px; }
+.commits { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 12px; }
+.commits div { display: flex; gap: 8px; }
+.commits .h { font-family: var(--font-mono); color: var(--text-subtle); }
+
+/* Dialog, toast, menu */
+.overlay { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px 16px; z-index: 50; }
+.dialog { width: 100%; max-width: 660px; max-height: 84vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-dialog); }
+.dialog .card-b { display: flex; flex-direction: column; gap: 9px; line-height: 19px; }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; align-items: center; }
+.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 7px 14px; border-radius: 8px; font-size: 12.5px; box-shadow: var(--shadow-pop); z-index: 60; display: flex; gap: 10px; align-items: center; max-width: calc(100vw - 32px); }
+.toast button { color: inherit; text-decoration: underline; font-weight: 600; }
+.menu { position: fixed; z-index: 40; min-width: 240px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-pop); padding: 4px; display: flex; flex-direction: column; }
+.menu button { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 5px; font-size: 12.5px; color: var(--text); }
+.menu button:hover { background: var(--surface-2); }
+.menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 2px; width: auto; }
+mark.hl { background: color-mix(in srgb, var(--warn-dot) 32%, transparent); border-radius: 2px; color: inherit; }
+
+@media (max-width: 900px) {
+  .side { width: 52px; } .side .hide-rail { display: none; }
+  .top-title span { display: none; }
+  .search { flex-basis: 120px; }
+  #newBtn span { display: none; }
+}
+@media (max-width: 600px) { .top-title { display: none; } .top { padding: 0 8px; gap: 6px; } }
+/* Mode switch + Easy mode: bigger, calmer, no ids / file names / technical columns */
+.mode-seg { margin-right: 6px; }
+.mode-seg button[aria-pressed='true'] { background: var(--primary); color: var(--on-primary); }
+:root[data-mode='easy'] body { font-size: 14px; line-height: 20px; }
+:root[data-mode='easy'] { --row: 40px; --pad: 12px; --gap: 16px; }
+:root[data-mode='easy'] .id, :root[data-mode='easy'] .src-tag, :root[data-mode='easy'] .adv-only { display: none !important; }
+:root[data-mode='easy'] #densBtn { display: none; }
+.hero { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .hero { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .hero { grid-template-columns: minmax(0, 1fr); } }
+.hero-main { background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--surface)), var(--surface)); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.hero-main h1 { font-size: 22px; line-height: 28px; font-weight: 700; }
+.hero-main p { color: var(--text-muted); font-size: 14px; }
+.big-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+button.big-stat:hover { border-color: var(--border-strong); }
+.big-stat .n { font-size: 34px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; color: var(--bt, var(--text)); }
+.big-stat .l { font-size: 14px; font-weight: 600; }
+.big-stat .s { font-size: 12.5px; color: var(--text-muted); }
+.ring { --p: 0; width: 64px; height: 64px; border-radius: 999px; background: conic-gradient(var(--ok-dot) calc(var(--p) * 1%), var(--surface-3) 0); display: grid; place-items: center; flex-shrink: 0; }
+.ring span { width: 50px; height: 50px; border-radius: 999px; background: var(--surface); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.add-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 600px) { .add-btns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.add-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); text-align: left; }
+.add-btn:hover, .add-btn[aria-pressed='true'] { border-color: var(--tc); background: color-mix(in srgb, var(--tc) 8%, var(--surface)); }
+.add-btn .ic { width: 20px; height: 20px; color: var(--tc); }
+.add-btn b { font-size: 14px; }
+.add-btn span { font-size: 12px; color: var(--text-muted); }
+.easy-li { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--border); }
+.easy-li:last-child { border-bottom: 0; }
+.easy-li .grow { flex: 1; min-width: 0; }
+.easy-li .t { font-weight: 500; }
+.easy-li .s { font-size: 12.5px; color: var(--text-muted); }
+.qa-item { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+.qa-item:last-child { border-bottom: 0; }
+.qa-q { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
+.qa-q .ic { color: var(--wait-text); margin-top: 2px; }
+.qa-q .grow { flex: 1; min-width: 0; }
+.qa-a { margin-left: 23px; padding: 8px 10px; border-radius: 8px; background: var(--ans-soft); color: var(--text); display: flex; flex-direction: column; gap: 2px; }
+.qa-a b { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ans-text); }
+.qa-a.none { background: var(--surface-2); color: var(--text-subtle); font-style: italic; }
+.qa-by { margin-left: 23px; font-size: 11.5px; color: var(--text-subtle); }
+.sum-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 12px; }
+.sum-opt { display: inline-flex; gap: 7px; align-items: center; font-size: 13px; cursor: pointer; }
+@media print { .side, .top-actions, .search { display: none; } body { overflow: visible; } .main { overflow: visible; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side">
+    <div class="side-head">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#2563eb"/><circle cx="16" cy="16" r="6" fill="none" stroke="#fff" stroke-width="2.4"/><ellipse cx="16" cy="16" rx="11.5" ry="4.6" fill="none" stroke="#fff" stroke-width="1.6" opacity=".85" transform="rotate(-28 16 16)"/><circle cx="25.2" cy="11.4" r="1.9" fill="#fff"/></svg>
+      <span class="brand hide-rail">@@PILOT_NAME@@<small>panel</small></span>
+    </div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <div class="side-foot hide-rail" id="sideFoot"></div>
+  </aside>
+  <div class="col-main">
+    <header class="top">
+      <button class="btn-icon" id="railBtn" title="Collapse or expand the menu" aria-label="Collapse or expand the menu"></button>
+      <div class="top-title"><strong id="pageTitle">Overview</strong><span id="pageSub"></span></div>
+      <div class="search" role="search">
+        <span id="searchIc"></span>
+        <input id="q" type="search" placeholder="Search everything (queue, notes, asks, checks, commits)" autocomplete="off" aria-label="Search everything">
+        <kbd>/</kbd>
+      </div>
+      <div class="top-actions">
+        <div class="seg mode-seg" id="modeSeg" role="group" aria-label="View mode"></div>
+        <button class="btn sm" id="sumBtn" title="Make a summary (S)"></button>
+        <button class="btn primary sm" id="newBtn" title="New note (N)"></button>
+        <button class="btn-icon" id="densBtn" title="Compact or roomy rows" aria-label="Row density"></button>
+        <button class="btn-icon" id="themeBtn" title="Light or dark" aria-label="Light or dark"></button>
+        <button class="btn-icon" id="menuBtn" title="More" aria-label="More" aria-haspopup="menu"></button>
+      </div>
+    </header>
+    <main class="main" id="main" tabindex="-1"><div class="page" id="page"></div></main>
+  </div>
+</div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<!--@@PILOT_DATA@@-->
+
+<script>
+(function () {
+'use strict';
+
+/* ================================================================ basics */
+var BOARD = window.BOARD || {};
+var CFG = window.PILOT || {};
+var NAME = CFG.name || 'Project', SLUG = CFG.slug || 'project', DATA_DIR = CFG.dataDir || 'the panel folder', TASK = CFG.taskName || 'Pilot panel';
+var AUTO = window.PILOT_AUTO || {};
+var LIVE_URL = '@@PILOT_LIVE_URL@@';
+var LS_STATE = 'pilot-' + SLUG + '-state-v1', LS_PREFS = 'pilot-' + SLUG + '-prefs-v1', LS_THEME = 'pilot-theme', LS_DENS = 'pilot-density';
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+function nowIso() { return new Date().toISOString(); }
+function ts(x) { var t = Date.parse(x || ''); return isNaN(t) ? 0 : t; }
+function uid(p) { return (p || 'n') + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function hash(s) { var h = 5381; s = String(s || ''); for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function clean(s) { return String(s == null ? '' : s).replace(/\*\*/g, '').replace(/`/g, '').trim(); }
+function cmpVer(a, b) { var x = String(a || '0').split('.'), y = String(b || '0').split('.'); for (var i = 0; i < 4; i++) { var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d; } return 0; }
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtTime(d) { d = d instanceof Date ? d : new Date(d); if (isNaN(d)) return ''; return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function fmtDay(d) { d = d instanceof Date ? d : new Date(d); if (isNaN(d)) return ''; return d.getDate() + ' ' + MON[d.getMonth()]; }
+function fmtWhen(x) { var d = new Date(x); if (!x || isNaN(d)) return String(x || ''); var t = new Date(); if (d.toDateString() === t.toDateString()) return fmtTime(d); return fmtDay(d) + ' ' + fmtTime(d); }
+function ago(x) { var t = ts(x); if (!t) return ''; var s = Math.round((Date.now() - t) / 1000); if (s < 60) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' d ago'; }
+
+/* DOM helper: h('div.cls#id', {attrs}, children...) */
+function h(sel, attrs) {
+  var m = /^([a-z0-9]+)?((?:[.#][\w-]+)*)$/i.exec(sel) || [];
+  var el = document.createElement(m[1] || 'div');
+  (m[2] || '').replace(/([.#])([\w-]+)/g, function (_, t, v) { if (t === '.') el.classList.add(v); else el.id = v; });
+  var start = 1;
+  if (attrs && typeof attrs === 'object' && !(attrs instanceof Node) && !Array.isArray(attrs)) {
+    start = 2;
+    for (var k in attrs) {
+      var v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') { String(v).split(/\s+/).forEach(function (c) { if (c) el.classList.add(c); }); }
+      else if (k === 'style' && typeof v === 'object') { for (var s in v) { if (s.indexOf('--') === 0) el.style.setProperty(s, v[s]); else el.style[s] = v[s]; } }
+      else if (k.slice(0, 2) === 'on' && typeof v === 'function') el.addEventListener(k.slice(2), v);
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'value') el.value = v;
+      else if (k === 'checked') el.checked = !!v;
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+  }
+  for (var i = start; i < arguments.length; i++) add(el, arguments[i]);
+  return el;
+}
+function add(el, c) {
+  if (c == null || c === false) return;
+  if (Array.isArray(c)) { c.forEach(function (x) { add(el, x); }); return; }
+  el.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
+}
+
+/* Safe inline markdown: **bold**, `code`, and the search highlight. */
+var hlTerm = '';
+function rich(text) {
+  var frag = document.createDocumentFragment();
+  String(text == null ? '' : text).split(/(\*\*[^*]+\*\*|`[^`]+`)/g).forEach(function (p) {
+    if (!p) return;
+    if (/^\*\*[^*]+\*\*$/.test(p)) frag.appendChild(h('strong', null, mark(p.slice(2, -2))));
+    else if (/^`[^`]+`$/.test(p)) frag.appendChild(h('code', null, p.slice(1, -1)));
+    else frag.appendChild(mark(p));
+  });
+  return frag;
+}
+function mark(s) {
+  s = String(s == null ? '' : s);
+  if (!hlTerm) return document.createTextNode(s);
+  var frag = document.createDocumentFragment(), low = s.toLowerCase(), i = 0, j;
+  while ((j = low.indexOf(hlTerm, i)) >= 0) { frag.appendChild(document.createTextNode(s.slice(i, j))); frag.appendChild(h('mark.hl', null, s.slice(j, j + hlTerm.length))); i = j + hlTerm.length; }
+  frag.appendChild(document.createTextNode(s.slice(i)));
+  return frag;
+}
+
+/* Icons (Lucide-style paths) */
+var ICONS = {
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  queue: '<path d="M10 6h11M10 12h11M10 18h11"/><path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
+  note: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+  hourglass: '<path d="M5 22h14M5 2h14M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  layers: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+  message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+  branch: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M6 9v6M18 9a9 9 0 0 1-9 9"/>',
+  activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
+  more: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+  rows: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
+  grip: '<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>',
+  up: '<path d="m18 15-6-6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>', top: '<path d="m17 11-5-5-5 5M17 18l-5-5-5 5"/>', bottom: '<path d="m7 13 5 5 5-5M7 6l5 5 5-5"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  bug: '<path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/>',
+  sparkle: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>',
+  bulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"/>',
+  pen: '<path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  task: '<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+  server: '<rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/>',
+  rocket: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
+  board: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'
+};
+function icon(name, cls) {
+  var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor');
+  s.setAttribute('stroke-width', '2'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+  s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'ic' + (cls ? ' ' + cls : ''));
+  s.innerHTML = ICONS[name] || '';
+  return s;
+}
+
+/* ================================================================ vocabulary */
+var ST = { done: 'Done', code: 'Built, not live', part: 'Partly done', wip: 'In progress', wait: 'Waiting on you / office', todo: 'Not started', answered: 'Answered', dropped: 'Dropped' };
+var ST_ORDER = ['wip', 'code', 'part', 'wait', 'todo', 'done', 'answered', 'dropped'];
+var CLOSED = { done: 1, answered: 1, dropped: 1 };
+var NST = { open: 'Open', doing: 'Doing', waiting: 'Waiting', done: 'Done', wontdo: "Won't do" };
+var NST_ORDER = ['open', 'doing', 'waiting', 'done', 'wontdo'];
+var NTYPE = {
+  issue: { label: 'Issue', icon: 'bug', key: '!' }, feature: { label: 'Feature', icon: 'sparkle', key: '+' },
+  question: { label: 'Question', icon: 'help', key: '?' }, idea: { label: 'Idea', icon: 'bulb', key: '*' },
+  task: { label: 'Task', icon: 'task', key: '>' }, note: { label: 'Note', icon: 'pen', key: '' }
+};
+var PRIO = { p0: 'P0 urgent', p1: 'P1 high', p2: 'P2 normal', p3: 'P3 low' };
+var PR_RANK = { p0: 0, p1: 1, p2: 2, p3: 3 };
+var AREAS = (CFG.areas && CFG.areas.length) ? CFG.areas : ['Frontend', 'Backend', 'Infra', 'Live system', 'Docs', 'Process', 'Other'];
+var stRank = {}; ST_ORDER.forEach(function (k, i) { stRank[k] = i; });
+
+/* ================================================================ state: the user's marks, notes, order */
+function emptyState() { return { v: 1, notes: {}, notesOrder: { ids: [], updated: '' }, marks: {}, queueOrder: { ids: [], updated: '' }, myQueue: {}, deleted: {}, updated: '' }; }
+function normalize(s) {
+  var e = emptyState();
+  if (!s || typeof s !== 'object') return e;
+  for (var k in e) if (s[k] == null || typeof s[k] !== typeof e[k]) s[k] = e[k];
+  if (!Array.isArray(s.queueOrder.ids)) s.queueOrder = e.queueOrder;
+  if (!Array.isArray(s.notesOrder.ids)) s.notesOrder = e.notesOrder;
+  return s;
+}
+function mergeState(a, b) {
+  a = normalize(a); b = normalize(b);
+  var out = emptyState();
+  [a.deleted, b.deleted].forEach(function (d) { for (var id in d) if (ts(d[id]) > ts(out.deleted[id])) out.deleted[id] = d[id]; });
+  ['notes', 'myQueue', 'marks'].forEach(function (coll) {
+    [a[coll], b[coll]].forEach(function (src) {
+      for (var id in src) { var v = src[id]; if (!v || typeof v !== 'object') continue; var cur = out[coll][id]; if (!cur || ts(v.updated) > ts(cur.updated)) out[coll][id] = v; }
+    });
+  });
+  ['notes', 'myQueue'].forEach(function (coll) { for (var id in out[coll]) if (out.deleted[id] && ts(out.deleted[id]) >= ts(out[coll][id].updated)) delete out[coll][id]; });
+  ['queueOrder', 'notesOrder'].forEach(function (o) { out[o] = ts(b[o].updated) > ts(a[o].updated) ? b[o] : a[o]; });
+  out.updated = ts(b.updated) > ts(a.updated) ? b.updated : a.updated;
+  return out;
+}
+function stable(o) {
+  if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']';
+  if (o && typeof o === 'object') return '{' + Object.keys(o).sort().map(function (k) { return JSON.stringify(k) + ':' + stable(o[k]); }).join(',') + '}';
+  return JSON.stringify(o);
+}
+var state = normalize(null);
+try { state = normalize(JSON.parse(lsGet(LS_STATE) || 'null')); } catch (e) { state = normalize(null); }
+if (window.PANEL_FILE) state = mergeState(state, window.PANEL_FILE);
+var prefs = {};
+try { prefs = JSON.parse(lsGet(LS_PREFS) || '{}') || {}; } catch (e) { prefs = {}; }
+function savePrefs() { lsSet(LS_PREFS, JSON.stringify(prefs)); }
+function saveLocal() { return lsSet(LS_STATE, JSON.stringify(state)); }
+var fileTimer = null;
+function syncAll() { helperSync(); syncFile(); }
+function commit(opts) {
+  state.updated = nowIso();
+  saveLocal();
+  clearTimeout(fileTimer); fileTimer = setTimeout(syncAll, 400);
+  if (!opts || !opts.quiet) render(); else updateSaveUi();
+}
+
+/* A status set by the user wins over the doc's status until it is reset (picking the doc status again). */
+function eff(item) { var m = state.marks[item.key]; return (m && m.status) || item.status; }
+function isMine(item) { var m = state.marks[item.key]; return !!(m && m.status && m.status !== item.status); }
+function setMark(item, status, noUndo) {
+  var old = state.marks[item.key] || {}, before = eff(item);
+  state.marks[item.key] = { status: status === item.status ? null : status, note: old.note || '', updated: nowIso(), label: clean(item.title || item.what || '').slice(0, 140), doc: item.status };
+  commit();
+  if (!noUndo && before !== eff(item)) toast('"' + clean(item.title || item.what || '').slice(0, 48) + '" → ' + ST[eff(item)], 'Undo', function () { setMark(item, before, true); });
+}
+function toggleDone(item) {
+  if (CLOSED[eff(item)]) setMark(item, item.status && !CLOSED[item.status] ? item.status : 'todo');
+  else setMark(item, 'done');
+}
+
+/* ================================================================ save helper: panel-server.js on 127.0.0.1 writes panel.json */
+var HELPER_URL = 'http://127.0.0.1:' + (CFG.helperPort || 47231) + '/panel', HELPER_TOKEN = '@@PILOT_TOKEN@@';
+var helperOK = false, helperBusy = false, helperAgain = false, lastHelperSync = null;
+function helperSync() {
+  if (HELPER_TOKEN.indexOf('@@') === 0 || typeof fetch !== 'function') return Promise.resolve();
+  if (helperBusy) { helperAgain = true; return Promise.resolve(); }
+  helperBusy = true;
+  return fetch(HELPER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Pilot-Token': HELPER_TOKEN }, body: JSON.stringify(state), cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (merged) {
+      helperOK = true; lastHelperSync = new Date();
+      var m = mergeState(state, merged);
+      if (stable(m) !== stable(state)) { state = m; saveLocal(); scheduleRender(); }
+    })
+    .catch(function () { helperOK = false; })
+    .then(function () { helperBusy = false; updateSaveUi(); if (helperAgain) { helperAgain = false; helperSync(); } });
+}
+
+/* ================================================================ save file: panel.json (File System Access API, fallback) */
+var fsOK = typeof window.showSaveFilePicker === 'function';
+var fileHandle = null, filePerm = fsOK ? 'none' : 'unsupported', fileErr = '', lastFileSync = null, syncing = false, syncAgain = false;
+function idb() {
+  return new Promise(function (res, rej) {
+    try { var r = indexedDB.open('pilot-' + SLUG, 1); r.onupgradeneeded = function () { r.result.createObjectStore('kv'); }; r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }
+    catch (e) { rej(e); }
+  });
+}
+function idbGet(k) { return idb().then(function (db) { return new Promise(function (res, rej) { var r = db.transaction('kv', 'readonly').objectStore('kv').get(k); r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); }); }
+function idbPut(k, v) { return idb().then(function (db) { return new Promise(function (res, rej) { var t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = function () { res(); }; t.onerror = function () { rej(t.error); }; }); }); }
+function initFile() {
+  if (!fsOK) { updateSaveUi(); return; }
+  idbGet('handle').then(function (hd) {
+    if (!hd) { filePerm = 'none'; updateSaveUi(); return; }
+    fileHandle = hd;
+    return hd.queryPermission({ mode: 'readwrite' }).then(function (p) { filePerm = p; updateSaveUi(); if (p === 'granted') return syncFile(); });
+  }).catch(function () { updateSaveUi(); });
+}
+function linkFile() {
+  if (!fsOK) { toast('This browser cannot write files. Use Chrome or Edge, or Export.'); return; }
+  window.showSaveFilePicker({ suggestedName: 'panel.json', types: [{ description: NAME + ' panel data', accept: { 'application/json': ['.json'] } }] })
+    .then(function (hd) { fileHandle = hd; filePerm = 'granted'; return idbPut('handle', hd).catch(function () {}); })
+    .then(function () { return syncFile(); })
+    .then(function () { toast('Linked. Every change now also saves to ' + (fileHandle ? fileHandle.name : 'the file') + '.'); })
+    .catch(function (e) { if (e && e.name !== 'AbortError') toast('Could not link the file: ' + e.message); updateSaveUi(); });
+}
+function reconnectFile() {
+  if (!fileHandle) { linkFile(); return; }
+  fileHandle.requestPermission({ mode: 'readwrite' }).then(function (p) { filePerm = p; updateSaveUi(); if (p === 'granted') syncFile(); }).catch(function () {});
+}
+function syncFile() {
+  if (!fileHandle || filePerm !== 'granted') return Promise.resolve();
+  if (syncing) { syncAgain = true; return Promise.resolve(); }
+  syncing = true;
+  var diskText = '';
+  return fileHandle.getFile().then(function (f) { return f.text(); }).then(function (t) {
+    diskText = t;
+    var disk = null;
+    try { disk = t.trim() ? JSON.parse(t) : null; } catch (e) { disk = null; }
+    var merged = disk ? mergeState(state, disk) : state;
+    if (stable(merged) !== stable(state)) { state = merged; saveLocal(); scheduleRender(); }
+    var text = JSON.stringify(state, null, 2);
+    if (text !== diskText) return fileHandle.createWritable().then(function (w) { return w.write(text).then(function () { return w.close(); }); });
+  }).then(function () { lastFileSync = new Date(); fileErr = ''; })
+    .catch(function (e) { fileErr = (e && e.message) || 'error'; if (e && e.name === 'NotAllowedError') { filePerm = 'prompt'; fileErr = ''; } })
+    .then(function () { syncing = false; updateSaveUi(); if (syncAgain) { syncAgain = false; syncFile(); } });
+}
+
+/* ================================================================ live data (live-data.js, rewritten every 2 minutes) */
+var liveState = 'snapshot';
+window.__pilotLive = function (auto, panel) {
+  liveState = 'ok';
+  var redraw = false;
+  if (auto && auto.generatedAt !== AUTO.generatedAt) { AUTO = auto; buildModel(); redraw = true; }
+  if (panel) { var m = mergeState(state, panel); if (stable(m) !== stable(state)) { state = m; saveLocal(); redraw = true; } }
+  if (redraw) scheduleRender(); else updateSaveUi();
+};
+function pollLive() {
+  if (LIVE_URL.indexOf('@@') === 0) return;
+  var s = document.createElement('script');
+  s.src = LIVE_URL + '?t=' + Date.now();
+  s.onload = function () { s.remove(); };
+  s.onerror = function () { s.remove(); liveState = 'error'; updateSaveUi(); };
+  document.head.appendChild(s);
+}
+
+/* ================================================================ model: doc items with stable keys */
+var M = {};
+function uniqKey(prefix, id, title, seen) {
+  var k = id && id !== '—' && id !== '-' ? prefix + clean(id) : prefix + 'h' + hash(clean(title).slice(0, 90));
+  while (seen[k]) k += '+';
+  seen[k] = 1; return k;
+}
+function buildModel() {
+  var A = AUTO || {}, seen = {};
+  M = { queue: [], asks: [], reqs: [], checks: [], features: [], waiting: [], phases: [], log: [], commits: [], branches: [], older: [], changes: [], qa: [] };
+  var q = A.queue && A.queue.length ? A.queue : (BOARD.queue || []).map(function (r) { return { id: '', title: r[0], state: r[1], status: r[2] }; });
+  q.forEach(function (r, i) { M.queue.push({ kind: 'queue', key: uniqKey('q:', r.id, r.title, seen), id: clean(r.id), title: r.title, who: r.who || '', state: r.state || '', status: r.status || 'todo', base: i }); });
+  (A.asks || []).forEach(function (r) { M.asks.push({ kind: 'ask', key: uniqKey('a:', r.id, r.title, seen), id: clean(r.id), date: r.date, title: r.title, state: r.state, notes: r.notes, status: r.status }); });
+  (A.requirements || []).forEach(function (r) { M.reqs.push({ kind: 'req', key: uniqKey('r:', r.id, r.title, seen), id: clean(r.id), title: r.title, state: r.state, status: r.status }); });
+  (A.checks || []).forEach(function (r) { M.checks.push({ kind: 'check', key: uniqKey('c:', r.id, r.what, seen), id: clean(r.id), title: r.what, what: r.what, since: r.since, target: r.target, how: r.how, status: r.done ? 'done' : 'todo' }); });
+  (BOARD.phases || []).forEach(function (p, pi) {
+    var auto = p.id === 'px' ? null : ((A.phaseTable || [])[pi] || null);
+    var ph = { id: p.id, title: p.title, meta: p.meta, note: p.note, auto: auto, items: [] };
+    (p.items || []).forEach(function (it) {
+      var f = { kind: 'feature', key: uniqKey('f:' + p.id + ':', '', it[0], seen), phase: p.id, phaseTitle: p.title, title: it[0], state: it[1], status: it[2] || 'todo', changed: it[3] || '' };
+      ph.items.push(f); M.features.push(f);
+    });
+    M.phases.push(ph);
+  });
+  var w = [];
+  (A.waitingResume || []).forEach(function (t) { w.push({ title: t, state: '', src: 'RESUME.md' }); });
+  (A.waitingReq || []).forEach(function (t) { w.push({ title: t, state: '', src: 'REQUESTS.md' }); });
+  (BOARD.todo || []).forEach(function (t) { w.push({ title: t[0], state: t[1], src: 'Board' }); });
+  var wseen = {};
+  w.forEach(function (x) { var k = clean(x.title).toLowerCase().slice(0, 60); if (wseen[k]) return; wseen[k] = 1; M.waiting.push({ kind: 'wait', key: uniqKey('w:', '', x.title, seen), title: x.title, state: x.state, src: x.src, status: 'wait' }); });
+  M.log = (A.log || []).map(function (r, i) { return { kind: 'log', key: 'l:' + i, when: r.when, who: r.who, title: r.text }; });
+  M.commits = ((A.git || {}).commits || []).map(function (c) { return { kind: 'commit', key: 'g:' + c.hash, hash: c.hash, at: c.at, refs: c.refs, title: c.subject }; });
+  M.branches = (A.git || {}).branches || [];
+  (BOARD.sessions || []).forEach(function (s) {
+    if (s.id === 'auto-requests') return;
+    (s.items || []).forEach(function (it) { M.older.push({ kind: 'older', key: uniqKey('s:' + s.id + ':', '', it[1], seen), session: s.title, date: it[0], title: it[1], state: it[2], status: it[3] || 'todo' }); });
+  });
+  M.qa = (A.qa || []).map(function (r, i) { return { kind: 'qa', key: 'qa:' + (r.id || i), id: r.id, date: r.date, title: r.q, q: r.q, a: r.a, by: r.by }; });
+  M.changes = (BOARD.changes || []).map(function (c, i) { return { kind: 'change', key: 'ch:' + i, when: c[0], title: c[1] }; });
+}
+
+/* Queue order: the user's saved order first, then rows the user hasn't placed yet, in doc order (new asks go to the end). */
+function queueItems() {
+  var mine = Object.keys(state.myQueue).map(function (id) { var x = state.myQueue[id]; return { kind: 'queue', key: id, id: '', title: x.title, who: x.who || 'You', state: x.state || 'Added in the panel', status: x.status || 'todo', mineItem: true, created: x.created, fromNote: x.fromNote }; });
+  var all = M.queue.concat(mine), byKey = {};
+  all.forEach(function (x) { byKey[x.key] = x; });
+  var out = [], used = {};
+  (state.queueOrder.ids || []).forEach(function (k) { if (byKey[k] && !used[k]) { out.push(byKey[k]); used[k] = 1; } });
+  all.forEach(function (x) { if (!used[x.key]) { out.push(x); used[x.key] = 1; } });
+  return out;
+}
+function setQueueOrder(keys) { state.queueOrder = { ids: keys, updated: nowIso() }; commit(); }
+function moveInQueue(key, where) {
+  var keys = queueItems().map(function (x) { return x.key; });
+  var i = keys.indexOf(key); if (i < 0) return;
+  keys.splice(i, 1);
+  var j = where === 'top' ? 0 : where === 'bottom' ? keys.length : where === 'up' ? Math.max(0, i - 1) : Math.min(keys.length, i + 1);
+  keys.splice(j, 0, key);
+  setQueueOrder(keys);
+}
+function addQueueRow(title) { var id = uid('mq'), t = nowIso(); state.myQueue[id] = { id: id, title: title, who: 'You', state: 'Added in the panel', status: 'todo', created: t, updated: t }; commit(); }
+
+/* Notes */
+function notesList() { return Object.keys(state.notes).map(function (k) { return state.notes[k]; }); }
+function isOpenNote(n) { return n.status !== 'done' && n.status !== 'wontdo'; }
+function openNotes() { return notesList().filter(isOpenNote); }
+function parseQuick(text) {
+  var t = text.trim(), type = null;
+  for (var k in NTYPE) { var p = NTYPE[k].key; if (p && t.indexOf(p + ' ') === 0) { type = k; t = t.slice(2).trim(); break; } }
+  var prio = null, m = /(^|\s)!(p[0-3])\b/i.exec(t);
+  if (m) { prio = m[2].toLowerCase(); t = (t.slice(0, m.index) + t.slice(m.index + m[0].length)).trim(); }
+  var tags = [];
+  t = t.replace(/(^|\s)#([\w-]+)/g, function (_, s, g) { tags.push(g); return s; }).replace(/\s{2,}/g, ' ').trim();
+  if (!type && /\?\s*$/.test(t)) type = 'question';
+  return { title: t, type: type, prio: prio, tags: tags };
+}
+function addNote(fields) {
+  var id = uid('n'), t = nowIso();
+  state.notes[id] = { id: id, type: fields.type || 'issue', title: fields.title, body: fields.body || '', answer: '', prio: fields.prio || 'p2', status: 'open', area: fields.area || '', tags: fields.tags || [], created: t, updated: t };
+  state.notesOrder = { ids: [id].concat((state.notesOrder.ids || []).filter(function (x) { return x !== id; })), updated: t };
+  commit();
+  return state.notes[id];
+}
+function updNote(id, patch, quiet) {
+  var n = state.notes[id]; if (!n) return;
+  for (var k in patch) n[k] = patch[k];
+  n.updated = nowIso();
+  if (patch.status === 'done' && !n.doneAt) n.doneAt = n.updated;
+  commit({ quiet: !!quiet });
+}
+function delNote(id) {
+  var n = state.notes[id]; if (!n) return;
+  var copy = JSON.parse(JSON.stringify(n));
+  delete state.notes[id]; state.deleted[id] = nowIso(); commit();
+  toast('Deleted "' + clean(copy.title).slice(0, 40) + '"', 'Undo', function () { delete state.deleted[id]; copy.updated = nowIso(); state.notes[id] = copy; commit(); });
+}
+function noteToQueue(n) {
+  var id = uid('mq'), t = nowIso();
+  state.myQueue[id] = { id: id, title: NTYPE[n.type].label + ': ' + n.title, who: 'You', state: 'From your notebook', status: 'todo', created: t, updated: t, fromNote: n.id };
+  n.queued = id; n.updated = t;
+  commit();
+  toast('Added to the end of the queue.');
+}
+function noteText(n) {
+  return '[' + NTYPE[n.type].label + ', ' + n.prio.toUpperCase() + ', ' + NST[n.status] + (n.area ? ', ' + n.area : '') + '] ' + n.title +
+    (n.body ? '\n' + n.body : '') + (n.answer ? '\nAnswer / outcome: ' + n.answer : '') + ((n.tags || []).length ? '\nTags: ' + n.tags.join(', ') : '');
+}
+function sortNotes(list, how) {
+  var pos = {}; (state.notesOrder.ids || []).forEach(function (id, i) { pos[id] = i; });
+  var types = Object.keys(NTYPE);
+  var g = {
+    manual: function (a, b) { var x = pos[a.id] == null ? -1 : pos[a.id], y = pos[b.id] == null ? -1 : pos[b.id]; return x - y || ts(b.created) - ts(a.created); },
+    prio: function (a, b) { return PR_RANK[a.prio] - PR_RANK[b.prio] || NST_ORDER.indexOf(a.status) - NST_ORDER.indexOf(b.status) || ts(b.updated) - ts(a.updated); },
+    newest: function (a, b) { return ts(b.created) - ts(a.created); },
+    oldest: function (a, b) { return ts(a.created) - ts(b.created); },
+    updated: function (a, b) { return ts(b.updated) - ts(a.updated); },
+    type: function (a, b) { return types.indexOf(a.type) - types.indexOf(b.type) || PR_RANK[a.prio] - PR_RANK[b.prio]; },
+    status: function (a, b) { return NST_ORDER.indexOf(a.status) - NST_ORDER.indexOf(b.status) || PR_RANK[a.prio] - PR_RANK[b.prio]; },
+    title: function (a, b) { return String(a.title).localeCompare(String(b.title)); }
+  };
+  return list.slice().sort(g[how] || g.prio);
+}
+
+/* ================================================================ chrome */
+/* Two modes. Easy: a plain-words home, the board, notes and "needs you"; no ids, file names or technical pages.
+   Advanced: every page and detail. New panels start in Easy; the switch sits in the top bar. */
+var mode = prefs.mode === 'advanced' ? 'advanced' : 'easy';
+var view = mode === 'easy' ? 'home' : 'overview', editing = null, pendingRender = false, nbView = prefs.nbView || 'list', prevView = view;
+var EASY_VIEWS = [
+  { g: 'Your project', items: [
+    { id: 'home', label: 'Home', icon: 'grid', key: '1', sub: 'How the project is doing, in plain words' },
+    { id: 'kanban', label: 'Board', icon: 'board', key: '2', sub: 'All work as cards. Drag a card to change its status.' },
+    { id: 'notebook', label: 'My notes', icon: 'note', key: '3', sub: 'Write down issues, wishes, questions and ideas' },
+    { id: 'waiting', label: 'Needs you', icon: 'hourglass', key: '4', sub: 'Things only you can do or answer' },
+    { id: 'qa', label: 'Questions & answers', icon: 'help', key: '5', sub: 'Every question you asked and its answer' }
+  ] }
+];
+var ADV_VIEWS = [
+  { g: 'Command', items: [
+    { id: 'overview', label: 'Overview', icon: 'grid', key: '1', sub: 'Everything at a glance, updated by itself' },
+    { id: 'queue', label: 'Queue', icon: 'queue', key: '2', sub: 'Work order: drag to reorder, mark done, add rows' },
+    { id: 'kanban', label: 'Board', icon: 'board', key: 'b', sub: 'Every item as cards: drag between columns to change status' },
+    { id: 'notebook', label: 'Notebook', icon: 'note', key: '3', sub: 'Your issues, features, questions and ideas' },
+    { id: 'waiting', label: 'Waiting on you', icon: 'hourglass', key: '4', sub: 'Steps and answers only you can give' },
+    { id: 'qa', label: 'Questions & answers', icon: 'help', key: 'q', sub: 'Questions asked in chat (QA.md) and in your notes, with answers' }
+  ] },
+  { g: 'Tracking', items: [
+    { id: 'reqs', label: 'Requirements', icon: 'target', key: '5', sub: 'The requirements table in PROGRESS.md' },
+    { id: 'features', label: 'Features by phase', icon: 'layers', key: '6', sub: 'Every feature of every phase' },
+    { id: 'asks', label: 'Every ask', icon: 'message', key: '7', sub: 'Your requests (REQUESTS.md)' },
+    { id: 'checks', label: 'Before rollout', icon: 'shield', key: '8', sub: 'Test shortcuts to undo and checks still to do (BEFORE-ROLLOUT.md)' }
+  ] },
+  { g: 'Activity', items: [
+    { id: 'releases', label: 'Releases & branches', icon: 'branch', key: '9', sub: 'Live version, work not live yet, sessions and claims' },
+    { id: 'activity', label: 'Activity', icon: 'activity', key: '0', sub: 'Coordination log, commits and board notes' }
+  ] }
+];
+var VIEWS = mode === 'easy' ? EASY_VIEWS : ADV_VIEWS;
+function setMode(m) {
+  mode = m; prefs.mode = m; savePrefs();
+  VIEWS = m === 'easy' ? EASY_VIEWS : ADV_VIEWS;
+  document.documentElement.setAttribute('data-mode', m);
+  var ok = false; VIEWS.forEach(function (g) { g.items.forEach(function (x) { if (x.id === view) ok = true; }); });
+  paintModeSwitch();
+  go(ok ? view : (m === 'easy' ? 'home' : 'overview'));
+}
+function paintModeSwitch() {
+  var s = document.getElementById('modeSeg'); if (!s) return;
+  s.textContent = '';
+  [['easy', 'Easy'], ['advanced', 'Advanced']].forEach(function (o) {
+    s.appendChild(h('button', { 'aria-pressed': mode === o[0] ? 'true' : 'false', title: o[0] === 'easy' ? 'Simple view: the essentials in plain words' : 'Every page and detail', onclick: function () { if (mode !== o[0]) setMode(o[0]); } }, o[1]));
+  });
+}
+function viewInfo(id) { var all = EASY_VIEWS.concat(ADV_VIEWS); for (var i = 0; i < all.length; i++) for (var j = 0; j < all[i].items.length; j++) if (all[i].items[j].id === id) return all[i].items[j]; return { id: id, label: 'Search', sub: 'Results from every section' }; }
+function counts() {
+  var q = queueItems();
+  return {
+    queueOpen: q.filter(function (x) { return !CLOSED[eff(x)]; }).length,
+    notesOpen: openNotes().length,
+    waiting: M.waiting.filter(function (x) { return !CLOSED[eff(x)]; }).length,
+    reqsOpen: M.reqs.filter(function (x) { return eff(x) !== 'done'; }).length,
+    checksOpen: M.checks.filter(function (x) { return !CLOSED[eff(x)]; }).length,
+    asksOpen: M.asks.filter(function (x) { return !CLOSED[eff(x)]; }).length,
+    unshipped: M.branches.filter(function (b) { return b.unique > 0; }).length
+  };
+}
+function renderNav() {
+  var c = counts(), nav = document.getElementById('nav');
+  var badge = { qa: openNotes().filter(function (n) { return n.type === 'question' && !n.answer; }).length || null, queue: c.queueOpen, notebook: c.notesOpen, waiting: c.waiting, reqs: c.reqsOpen, checks: c.checksOpen, asks: c.asksOpen, releases: c.unshipped };
+  nav.textContent = '';
+  VIEWS.forEach(function (g) {
+    nav.appendChild(h('div.nav-group', null, h('div.nav-label.hide-rail', null, g.g), g.items.map(function (it) {
+      var b = badge[it.id];
+      return h('button.nav-item', { 'aria-current': view === it.id ? 'page' : null, title: it.label + ' (key ' + it.key + ')', onclick: function () { go(it.id); } },
+        icon(it.icon), h('span.nav-text.hide-rail', null, it.label), b ? h('span.nav-badge.hide-rail' + (it.id === 'waiting' ? '.warn' : ''), null, String(b)) : null);
+    })));
+  });
+  if (mode === 'easy') nav.appendChild(h('div.nav-group.hide-rail', null, h('button.nav-item', { onclick: function () { setMode('advanced'); }, title: 'Every page: queue, requirements, asks, checks, releases, activity' }, icon('layers'), h('span.nav-text', null, 'More detail…'))));
+}
+function updateSaveUi() {
+  var f = document.getElementById('sideFoot'); if (!f) return;
+  f.textContent = '';
+  var live = AUTO.live || {};
+  var gen = ts(AUTO.generatedAt), stale = gen && Date.now() - gen > 10 * 60 * 1000;
+  f.appendChild(h('div.save-line', { title: 'Live server /api/health checked ' + fmtWhen(live.checkedAt) },
+    h('span.dot', { class: (live.ok ? 'st-done pulse' : 'st-crit') }), h('span', null, !AUTO.live ? 'No live server set' : live.ok ? 'Live ' + (live.version || 'up') + (live.db ? ' · db ' + live.db : '') : 'Live server not answering')));
+  f.appendChild(h('div.save-line', { title: 'live-data.js is rewritten every 2 minutes by the task "' + TASK + '"; this page reads it every 30 seconds.' },
+    h('span.dot', { class: stale ? 'st-wip' : liveState === 'ok' ? 'st-done' : liveState === 'error' ? 'st-crit' : 'st-todo' }),
+    h('span', null, 'Data ' + (gen ? ago(AUTO.generatedAt) : 'not built') + (liveState === 'error' ? ' (file not reachable)' : stale ? ' (auto-update stopped?)' : ''))));
+  var line, act = null, ok = false;
+  if (helperOK) { ok = true; line = 'Saved to panel.json automatically' + (lastHelperSync ? ' · ' + fmtTime(lastHelperSync) : ''); }
+  else if (filePerm === 'granted' && !fileErr) { ok = true; line = 'Saved to ' + (fileHandle ? fileHandle.name : 'file') + (lastFileSync ? ' · ' + fmtTime(lastFileSync) : ''); }
+  else if (filePerm === 'granted') line = 'File save failed: ' + fileErr;
+  else if (filePerm === 'prompt' || filePerm === 'denied') { line = 'Saved in this browser'; act = h('button.btn.sm', { onclick: reconnectFile, title: 'One click lets the page keep writing panel.json' }, icon('link'), 'Reconnect panel.json'); }
+  else if (filePerm === 'unsupported') line = 'Saved in this browser (use Export)';
+  else { line = 'Saved in this browser only'; act = h('button.btn.sm', { onclick: linkFile, title: 'Save your notes, marks and order to ' + DATA_DIR + '\\panel.json so Claude sessions read them' }, icon('link'), 'Link panel.json'); }
+  f.appendChild(h('div.save-line', { title: line }, h('span.dot', { class: ok ? 'st-done' : 'st-wip' }), h('span', null, line)));
+  if (act) f.appendChild(act);
+}
+var toastTimer = null;
+function toast(msg, actLabel, act) {
+  var old = document.querySelector('.toast'); if (old) old.remove();
+  var t = h('div.toast', { role: 'status' }, h('span', null, msg), actLabel ? h('button', { onclick: function () { t.remove(); act(); } }, actLabel) : null);
+  document.body.appendChild(t);
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.remove(); }, actLabel ? 7000 : 3200);
+}
+function dialog(title, body) {
+  var ov = h('div.overlay', { onclick: function (e) { if (e.target === ov) close(); } });
+  function close() { ov.remove(); document.removeEventListener('keydown', esc, true); }
+  function esc(e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } }
+  document.addEventListener('keydown', esc, true);
+  ov.appendChild(h('div.dialog', { role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+    h('div.card-h', null, h('h2', null, title), h('span.spacer'), h('button.btn-icon.sm', { 'aria-label': 'Close', onclick: close }, icon('x'))), h('div.card-b', null, body)));
+  document.body.appendChild(ov);
+  var b = ov.querySelector('button'); if (b) b.focus();
+  return close;
+}
+function openMenu(anchor, items) {
+  var old = document.querySelector('.menu'); if (old) { old.remove(); return; }
+  var r = anchor.getBoundingClientRect();
+  var m = h('div.menu', { role: 'menu', style: { top: (r.bottom + 4) + 'px', right: (window.innerWidth - r.right) + 'px' } });
+  items.forEach(function (it) { if (it === '-') m.appendChild(h('hr')); else m.appendChild(h('button', { role: 'menuitem', onclick: function () { m.remove(); it.fn(); } }, icon(it.icon), it.label)); });
+  document.body.appendChild(m);
+  setTimeout(function () { document.addEventListener('click', function off(e) { if (!m.contains(e.target)) { m.remove(); document.removeEventListener('click', off); } }); }, 0);
+}
+function go(id, focusKey) {
+  view = id; editing = null;
+  if (id !== 'search') { prefs.view = id; savePrefs(); var q = document.getElementById('q'); if (q.value) q.value = ''; }
+  try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  render();
+  document.getElementById('main').scrollTop = 0;
+  if (focusKey) setTimeout(function () {
+    var esc = window.CSS && CSS.escape ? CSS.escape(focusKey) : focusKey;
+    var row = document.querySelector('[data-key="' + esc + '"]');
+    if (row) { row.scrollIntoView({ block: 'center' }); row.classList.add('flash'); }
+  }, 40);
+}
+function isTextField(a) { return !!a && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|file)$/i.test(a.type))); }
+function editingNow() { var a = document.activeElement; return !!(a && a.id !== 'q' && isTextField(a) && document.getElementById('main').contains(a)); }
+function scheduleRender() { if (editingNow()) { pendingRender = true; return; } requestAnimationFrame(render); }
+document.addEventListener('focusout', function () { if (pendingRender) setTimeout(function () { if (!editingNow() && pendingRender) render(); }, 150); });
+
+/* ================================================================ shared pieces */
+function statusSel(item) {
+  var e = eff(item);
+  var s = h('select.psel', { class: 'st-' + e + (isMine(item) ? ' mine' : ''), 'aria-label': 'Status',
+    title: isMine(item) ? 'Set by you. The doc says: ' + ST[item.status] + '. Pick that again to reset.' : 'Status from the docs. Change it to mark it yourself.',
+    onchange: function () { setMark(item, s.value); }, onclick: function (ev) { ev.stopPropagation(); } },
+    ST_ORDER.map(function (k) { return h('option', { value: k, selected: k === e ? true : null }, ST[k] + (k === item.status && isMine(item) ? ' (doc)' : '')); }));
+  return s;
+}
+function doneBox(item) {
+  return h('input.chk', { type: 'checkbox', checked: !!CLOSED[eff(item)], 'aria-label': 'Mark as done', title: 'Mark as done', onclick: function (ev) { ev.stopPropagation(); }, onchange: function () { toggleDone(item); } });
+}
+function pill(status, label) { return h('span.pill', { class: 'st-' + status }, label || ST[status] || status); }
+function stackBar(list, tall, width) {
+  var c = {}; list.forEach(function (x) { var e = eff(x); c[e] = (c[e] || 0) + 1; });
+  var total = list.length || 1;
+  var b = h('div.bar' + (tall ? '.tall' : ''), { title: ST_ORDER.filter(function (k) { return c[k]; }).map(function (k) { return ST[k] + ': ' + c[k]; }).join(' · ') },
+    ['done', 'answered', 'part', 'code', 'wip', 'wait', 'todo', 'dropped'].filter(function (k) { return c[k]; }).map(function (k) { return h('i', { class: 'st-' + k, style: { width: (c[k] * 100 / total) + '%' } }); }));
+  if (width) b.style.width = width;
+  return b;
+}
+function legend(keys) { return h('div.legend', null, keys.map(function (k) { return h('span', { class: 'st-' + k }, h('span.dot'), ST[k]); })); }
+function card(title, sub, actions, body, foot) {
+  return h('section.card', null, h('div.card-h', null, h('h2', null, title), sub ? h('span.sub', null, sub) : null, h('span.spacer'), actions || null), body, foot ? h('div.card-f', null, foot) : null);
+}
+function chipsFor(name, opts, cur, onPick) {
+  return h('div.chips', { role: 'group', 'aria-label': name }, opts.map(function (o) {
+    return h('button.chip', { 'aria-pressed': cur === o.v ? 'true' : 'false', onclick: function () { onPick(o.v); } }, o.icon ? icon(o.icon) : null, o.l, o.n != null ? h('span.cnt', null, String(o.n)) : null);
+  }));
+}
+function localSearch(key, placeholder) {
+  var inp = h('input.input', { type: 'search', placeholder: placeholder || 'Filter', value: prefs[key] || '', style: { width: '220px' }, 'aria-label': placeholder || 'Filter',
+    oninput: function () { prefs[key] = inp.value; savePrefs(); clearTimeout(inp._t); inp._t = setTimeout(function () { render(); var n = document.getElementById('ls-' + key); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 200); } });
+  inp.id = 'ls-' + key;
+  return inp;
+}
+function matches(item, q) {
+  if (!q) return true;
+  q = q.toLowerCase();
+  return [item.id, item.title, item.state, item.notes, item.who, item.how, item.target, item.body, item.answer, (item.tags || []).join(' '), item.src, item.session, item.area]
+    .some(function (v) { return v && String(v).toLowerCase().indexOf(q) >= 0; });
+}
+function clampText(t, cls) { var d = h('div.clamp' + (cls ? '.' + cls : ''), { title: 'Click to show all / less', onclick: function (e) { e.stopPropagation(); d.classList.toggle('open'); } }, rich(t)); return d; }
+function statusChipOpts(list) {
+  var c = {}; list.forEach(function (x) { var e = eff(x); c[e] = (c[e] || 0) + 1; });
+  var o = [{ v: 'open', l: 'Open', n: list.filter(function (x) { return !CLOSED[eff(x)]; }).length }, { v: 'all', l: 'All', n: list.length }];
+  ST_ORDER.forEach(function (k) { if (c[k]) o.push({ v: k, l: ST[k], n: c[k] }); });
+  return o;
+}
+function filterByStatus(list, f) {
+  if (!f || f === 'all') return list;
+  if (f === 'open') return list.filter(function (x) { return !CLOSED[eff(x)]; });
+  return list.filter(function (x) { return eff(x) === f; });
+}
+function sortHead(label, key, prefKey) {
+  var cur = prefs[prefKey] || '', dir = cur === key ? 'asc' : cur === '-' + key ? 'desc' : '';
+  return h('th.sortable', { 'aria-sort': dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : null, title: 'Sort',
+    onclick: function () { prefs[prefKey] = dir === 'asc' ? '-' + key : dir === 'desc' ? '' : key; savePrefs(); render(); } }, label + (dir === 'asc' ? ' ↑' : dir === 'desc' ? ' ↓' : ''));
+}
+function sortList(list, prefKey, getters) {
+  var s = prefs[prefKey]; if (!s) return list;
+  var desc = s[0] === '-', k = desc ? s.slice(1) : s, g = getters[k]; if (!g) return list;
+  return list.slice().sort(function (a, b) { var x = g(a), y = g(b); var r = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); return desc ? -r : r; });
+}
+function typeTag(t, short) { var d = NTYPE[t] || NTYPE.note; return h('span.type', { class: 't-' + (NTYPE[t] ? t : 'note'), title: d.label }, icon(d.icon), short ? null : d.label); }
+function copyText(t) {
+  function fallback() { var ta = h('textarea', { style: { position: 'fixed', opacity: '0' } }); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).catch(fallback); else fallback();
+}
+function srcFoot(name) { var s = (AUTO.sources || {})[name]; return s ? 'Source: ' + s.path + ' (changed ' + fmtWhen(s.at) + '). Updates by itself.' : 'Source file not found.'; }
+function nextRelease() {
+  var live = AUTO.live || {};
+  return M.branches.filter(function (b) { return b.unique > 0 && b.version && (!live.version || cmpVer(b.version, live.version) > 0); }).sort(function (a, b) { return cmpVer(b.version, a.version); });
+}
+
+/* ================================================================ pages */
+var PAGES = {};
+function render() {
+  pendingRender = false;
+  renderNav();
+  var info = viewInfo(view);
+  document.getElementById('pageTitle').textContent = info.label;
+  document.getElementById('pageSub').textContent = info.sub + (AUTO.generatedAt ? ' · data ' + fmtWhen(AUTO.generatedAt) : '');
+  hlTerm = view === 'search' ? (document.getElementById('q').value || '').trim().toLowerCase() : '';
+  var main = document.getElementById('main'), page = document.getElementById('page'), y = main.scrollTop;
+  page.textContent = '';
+  try { page.appendChild((PAGES[view] || PAGES.overview)()); }
+  catch (err) { page.appendChild(h('div.banner.st-crit', null, icon('alert'), h('span.grow', null, 'This section failed to draw: ' + err.message))); if (window.console) console.error(err); }
+  main.scrollTop = y;
+  updateSaveUi();
+}
+
+/* ---------- Easy home: the project in plain words */
+var easyAdd = 'issue';
+function plain(s) { return clean(s).replace(/^#?[A-Z]?\d+(\.\d+)?\s*[·:-]?\s*(?=\S)/, '').replace(/\s*\((request|requests|queue)[^)]*\)/gi, ''); }
+PAGES.home = function () {
+  var A = AUTO, live = A.live, q = queueItems();
+  var qOpen = q.filter(function (x) { return !CLOSED[eff(x)]; });
+  var base = M.reqs.length ? M.reqs : q.concat(M.asks);
+  var doneN = base.filter(function (x) { return CLOSED[eff(x)]; }).length, pct = base.length ? Math.round(doneN * 100 / base.length) : 0;
+  var busy = q.filter(function (x) { var e = eff(x); return e === 'wip' || e === 'code' || e === 'part'; });
+  var needs = M.waiting.filter(function (x) { return !CLOSED[eff(x)]; });
+  var questions = openNotes().filter(function (n) { return n.type === 'question'; });
+  var next = nextRelease()[0];
+  var lines = [];
+  if (live) lines.push(live.ok ? 'The live system is running' + (live.version ? ' (version ' + live.version + ').' : '.') : 'The live system is not answering right now.');
+  if (next) lines.push('Version ' + next.version + ' is built and waiting to go live.');
+  lines.push(qOpen.length ? (qOpen.length === 1 ? '1 thing is' : qOpen.length + ' things are') + ' on the to-do list; ' + busy.length + ' of ' + (qOpen.length === 1 ? 'it is' : 'them are') + ' being worked on.' : 'The to-do list is empty.');
+  var nn = needs.length + questions.length; if (nn) lines.push(nn === 1 ? '1 thing needs you.' : nn + ' things need you.');
+  var root = h('div.col-flex');
+  root.appendChild(h('div.hero', null,
+    h('div.hero-main', null,
+      h('div', { style: { display: 'flex', gap: '14px', alignItems: 'center' } },
+        h('div.ring', { style: { '--p': String(pct) }, title: doneN + ' of ' + base.length + ' done' }, h('span', null, pct + '%')),
+        h('div', null, h('h1', null, NAME), h('p', null, M.reqs.length ? 'of the requirements are done' : 'of the work is done'))),
+      h('div', null, lines.map(function (l) { return h('p', null, l); }))),
+    h('button.big-stat.st-done', { onclick: function () { go('kanban'); } }, h('div.n', null, String(doneN)), h('div.l', null, 'Done'), h('div.s', null, 'finished and checked')),
+    h('button.big-stat.st-wip', { onclick: function () { go('kanban'); } }, h('div.n', null, String(busy.length)), h('div.l', null, 'Being worked on'), h('div.s', null, 'in progress or built, not live yet')),
+    h('button.big-stat.st-wait', { onclick: function () { go('waiting'); } }, h('div.n', null, String(needs.length + questions.length)), h('div.l', null, 'Need you'), h('div.s', null, 'steps, answers or decisions'))));
+
+  function easyRow(x, sub) {
+    return h('div.easy-li', { 'data-key': x.key }, doneBox(x), h('div.grow', null, h('div.t', null, plain(x.title)), sub ? h('div.s', null, sub) : null), pill(eff(x)));
+  }
+  root.appendChild(h('div.grid', { style: { gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' } },
+    card('Next up', 'top of the to-do list', h('button.link', { onclick: function () { go('kanban'); } }, 'See the board →'),
+      h('div.card-b.flush', null, qOpen.length ? qOpen.slice(0, 6).map(function (x) { return easyRow(x); }) : h('div.empty', null, 'Nothing on the to-do list.'))),
+    card('Needs you', 'tick when done', h('button.link', { onclick: function () { go('waiting'); } }, 'All →'),
+      h('div.card-b.flush', null, needs.length || questions.length ? needs.slice(0, 6).map(function (x) { return easyRow(x); }).concat(questions.slice(0, 3).map(function (n) {
+        return h('div.easy-li', null, typeTag('question', true), h('div.grow', null, h('div.t', null, n.title), h('div.s', null, n.answer ? 'Answered: ' + n.answer.split('\n')[0] : 'Your question, not answered yet')));
+      })) : h('div.empty', null, 'Nothing needs you right now.')))));
+
+  var addInput = h('input.input', { style: { width: '100%', height: '38px', fontSize: '14px' }, id: 'easyAddInput',
+    placeholder: { issue: 'What went wrong? (Enter to save)', feature: 'What should it do? (Enter to save)', question: 'What do you want to know? (Enter to save)', idea: 'Your idea (Enter to save)' }[easyAdd],
+    onkeydown: function (e) { if (e.key === 'Enter' && addInput.value.trim()) { addNote({ title: addInput.value.trim(), type: easyAdd, prio: 'p2' }); toast('Saved in your notes. Claude sessions will see it.'); setTimeout(function () { var x = document.getElementById('easyAddInput'); if (x) x.focus(); }, 0); } } });
+  var kinds = [['issue', 'Something is wrong', 'A bug or problem'], ['feature', 'I want something', 'A new feature or change'], ['question', 'I have a question', 'Claude answers it here'], ['idea', 'An idea', 'For later']];
+  var recent = sortNotes(openNotes(), 'newest').slice(0, 5);
+  root.appendChild(h('div.grid', { style: { gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' } },
+    card('Tell Claude something', 'saved as a note; every session reads your notes', null, h('div.card-b', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+      h('div.add-btns', null, kinds.map(function (k) {
+        return h('button.add-btn', { class: 't-' + k[0], 'aria-pressed': easyAdd === k[0] ? 'true' : 'false', onclick: function () { easyAdd = k[0]; render(); setTimeout(function () { var x = document.getElementById('easyAddInput'); if (x) x.focus(); }, 0); } },
+          icon(NTYPE[k[0]].icon), h('b', null, k[1]), h('span', null, k[2]));
+      })), addInput,
+      recent.length ? h('div', null, recent.map(function (n) { return h('div.easy-li', { style: { padding: '6px 2px' } }, typeTag(n.type, true), h('div.grow', null, h('div.t', null, n.title)), h('span.when', null, ago(n.created))); })) : null)),
+    card('What happened lately', 'newest first', null, h('div.card-b.flush', null,
+      (M.log.length ? M.log.slice(0, 5).map(function (l) { return h('div.easy-li', null, h('div.grow', null, h('div.s', null, l.when + ' · ' + clean(l.who)), clampText(l.title))); })
+        : M.commits.slice(0, 6).map(function (c) { return h('div.easy-li', null, h('div.grow', null, h('div.s', null, fmtWhen(c.at)), h('div', null, c.title))); }))))));
+  return root;
+};
+
+/* ---------- Questions & answers: QA.md (questions asked in chat) + the questions in the user's notes */
+PAGES.qa = function () {
+  var f = prefs.qaF || 'all', q = prefs.qaS || '';
+  var noteQs = notesList().filter(function (n) { return n.type === 'question'; }).map(function (n) {
+    return { kind: 'noteq', key: n.id, note: n, date: fmtDay(n.created), q: n.title + (n.body ? ' — ' + n.body : ''), a: n.answer || '', by: 'your note', at: ts(n.created) };
+  });
+  var chatQs = M.qa.map(function (x, i) { return { kind: 'qa', key: x.key, date: x.date, q: x.q, a: x.a, by: x.by || 'chat', at: Date.parse(x.date) || i }; });
+  var all = noteQs.concat(chatQs).sort(function (a, b) { return b.at - a.at; });
+  var list = all.filter(function (x) { return f === 'all' || (f === 'answered' ? !!x.a : !x.a); })
+    .filter(function (x) { return !q || (x.q + ' ' + x.a + ' ' + x.by).toLowerCase().indexOf(q.toLowerCase()) >= 0; });
+  var ask = h('input.input', { placeholder: 'Ask a question (Enter). Claude answers it here or in chat.', style: { flex: '1 1 340px', height: '34px', fontSize: '14px' },
+    onkeydown: function (e) { if (e.key === 'Enter' && ask.value.trim()) { addNote({ title: ask.value.trim(), type: 'question', prio: 'p2' }); toast('Question saved. Claude sessions see it.'); } } });
+  var unanswered = all.filter(function (x) { return !x.a; }).length;
+  var tb = h('div.toolbar', null,
+    chipsFor('Show', [{ v: 'all', l: 'All', n: all.length }, { v: 'open', l: 'Waiting for an answer', n: unanswered }, { v: 'answered', l: 'Answered', n: all.length - unanswered }], f, function (v) { prefs.qaF = v; savePrefs(); render(); }),
+    h('span.spacer'), localSearch('qaS', 'Search questions and answers'));
+  var items = list.map(function (x) {
+    return h('div.qa-item', { 'data-key': x.key },
+      h('div.qa-q', null, icon('help'), h('div.grow', null, rich(x.q)), h('span.when', null, x.date)),
+      x.a ? h('div.qa-a', null, h('b', null, 'Answer'), clampText(x.a)) : h('div.qa-a.none', null, x.kind === 'noteq' ? 'Not answered yet. A Claude session answers it in your notes, or ask it in chat.' : 'No answer recorded.'),
+      h('div.qa-by', null, x.by));
+  });
+  return h('div.col-flex', null,
+    h('section.card', null, h('div.qadd', null, icon('help'), ask), tb, h('div.card-b.flush', null, items.length ? items : h('div.empty', null, all.length ? 'Nothing matches.' : 'No questions yet. Questions you ask in chat are logged in QA.md by the sessions; questions you type above go to your notes.'))),
+    h('div.subtle', { style: { fontSize: '12px' } }, 'Chat questions come from ' + (((AUTO.sources || {}).qa || {}).path || 'docs/project/QA.md (sessions add a row for every question you ask)') + '.'));
+};
+
+/* ---------- Summary: pick what to summarise, get plain text or Markdown to copy or save */
+var SUM_PARTS = [
+  ['live', 'Live system and versions'], ['built', 'Built, not live yet'], ['wip', 'In progress'], ['todo', 'Not started'],
+  ['part', 'Partly done'], ['needs', 'Needs you'], ['recent', 'Done lately'], ['reqs', 'Requirements'],
+  ['checks', 'Before rollout'], ['qa', 'Questions & answers'], ['notes', 'My open notes']
+];
+var SUM_PRESETS = { short: ['live', 'built', 'wip', 'needs'], boss: ['live', 'built', 'wip', 'recent', 'needs', 'reqs'], all: SUM_PARTS.map(function (p) { return p[0]; }) };
+function workItems() { var seen = {}; return queueItems().concat(M.asks).filter(function (x) { var k = plain(x.title).toLowerCase().replace(/^#?\d+\s*/, '').slice(0, 60); if (seen[k]) return false; seen[k] = 1; return true; }); }
+function buildSummary(sel, md, full) {
+  var out = [], H = function (s) { out.push(''); out.push(md ? '## ' + s : s.toUpperCase()); }, B = function (s) { out.push((md ? '- ' : '  • ') + s); };
+  var lim = full ? 1000 : 8;
+  function list(items, fmt) { if (!items.length) { B('nothing'); return; } items.slice(0, lim).forEach(function (x) { B(fmt ? fmt(x) : plain(x.title)); }); if (items.length > lim) B('… and ' + (items.length - lim) + ' more'); }
+  out.push((md ? '# ' : '') + NAME + ' — summary, ' + fmtDay(new Date()) + ' ' + fmtTime(new Date()));
+  var w = workItems(), by = function (st) { return w.filter(function (x) { return eff(x) === st; }); };
+  if (sel.live) { H('Live system'); var lv = AUTO.live; if (lv) B(lv.ok ? 'Running' + (lv.version ? ', version ' + lv.version : '') : 'Not answering'); var g = AUTO.git || {}; if (g.main) B('Main branch: ' + g.main.hash + (g.main.version ? ' (version ' + g.main.version + ')' : '')); (g.versions || []).forEach(function (v) { B(v.label + ': ' + (v.value || '?')); }); }
+  if (sel.built) { H('Built, not live yet'); var br = M.branches.filter(function (b) { return b.unique > 0; }); br.forEach(function (b) { B((b.version ? 'Version ' + b.version + ' — ' : '') + b.name + ': ' + b.unique + ' changes, latest: ' + clean(b.subject)); }); list(by('code')); }
+  if (sel.wip) { H('In progress'); list(by('wip')); }
+  if (sel.todo) { H('Not started'); list(by('todo')); }
+  if (sel.part) { H('Partly done'); list(by('part')); }
+  if (sel.needs) { H('Needs you'); list(M.waiting.filter(function (x) { return !CLOSED[eff(x)]; })); openNotes().filter(function (n) { return n.type === 'question' && !n.answer; }).forEach(function (n) { B('Question: ' + n.title); }); }
+  if (sel.recent) { H('Done lately'); list(M.log.slice(0, full ? 30 : 6), function (l) { return l.when + ': ' + clean(l.title).slice(0, full ? 400 : 160); }); }
+  if (sel.reqs && M.reqs.length) { H('Requirements'); var d = M.reqs.filter(function (x) { return eff(x) === 'done'; }).length; B(d + ' of ' + M.reqs.length + ' done'); list(M.reqs.filter(function (x) { return eff(x) !== 'done'; }), function (x) { return '#' + x.id + ' ' + clean(x.title) + ' — ' + ST[eff(x)]; }); }
+  if (sel.checks && M.checks.length) { H('Before rollout'); var cd = M.checks.filter(function (x) { return CLOSED[eff(x)]; }).length; B(cd + ' of ' + M.checks.length + ' done'); if (full) list(M.checks.filter(function (x) { return !CLOSED[eff(x)]; }), function (x) { return '#' + x.id + ' ' + clean(x.what); }); }
+  if (sel.qa) { H('Questions & answers'); var qa = M.qa.slice(-(full ? 1000 : 8)).reverse(); if (!qa.length) B('none'); qa.forEach(function (x) { B('Q: ' + clean(x.q) + (md ? '  \n  ' : ' — ') + 'A: ' + clean(x.a)); }); }
+  if (sel.notes) { H('My open notes'); list(sortNotes(openNotes(), 'prio'), function (n) { return NTYPE[n.type].label + ' (' + n.prio.toUpperCase() + '): ' + n.title; }); }
+  return out.join('\n').trim() + '\n';
+}
+function openSummary() {
+  var sel = {}; (prefs.sumSel || SUM_PRESETS.short).forEach(function (k) { sel[k] = true; });
+  var md = prefs.sumMd !== false, full = !!prefs.sumFull;
+  var ta = h('textarea.textarea', { rows: '16', readonly: true, style: { fontFamily: 'var(--font-mono)', fontSize: '12px' }, 'aria-label': 'Summary text' });
+  function redo() { prefs.sumSel = Object.keys(sel).filter(function (k) { return sel[k]; }); prefs.sumMd = md; prefs.sumFull = full; savePrefs(); ta.value = buildSummary(sel, md, full); }
+  var boxes = h('div.sum-grid', null, SUM_PARTS.map(function (p) {
+    var cb = h('input.chk', { type: 'checkbox', checked: !!sel[p[0]], onchange: function () { sel[p[0]] = cb.checked; redo(); } });
+    return h('label.sum-opt', null, cb, p[1]);
+  }));
+  function preset(k) { sel = {}; SUM_PRESETS[k].forEach(function (x) { sel[x] = true; }); boxes.querySelectorAll('input').forEach(function (inp, i) { inp.checked = !!sel[SUM_PARTS[i][0]]; }); redo(); }
+  var close = dialog('Summary', [
+    h('div.chips', null, h('span.subtle', null, 'Quick pick:'), h('button.chip', { onclick: function () { preset('short'); } }, 'Short status'), h('button.chip', { onclick: function () { preset('boss'); } }, 'For a report'), h('button.chip', { onclick: function () { preset('all'); } }, 'Everything')),
+    boxes,
+    h('div.chips', null,
+      h('label.sum-opt', null, h('input.chk', { type: 'checkbox', checked: md, onchange: function (e) { md = e.target.checked; redo(); } }), 'Markdown'),
+      h('label.sum-opt', null, h('input.chk', { type: 'checkbox', checked: full, onchange: function (e) { full = e.target.checked; redo(); } }), 'Full detail (no "… and N more")')),
+    ta,
+    h('div.chips', null,
+      h('button.btn.primary.sm', { onclick: function () { copyText(ta.value); toast('Summary copied.'); } }, icon('copy'), 'Copy'),
+      h('button.btn.sm', { onclick: function () { var a = h('a', { href: URL.createObjectURL(new Blob([ta.value], { type: 'text/markdown' })), download: SLUG + '-summary-' + new Date().toISOString().slice(0, 10) + (md ? '.md' : '.txt') }); document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 300); } }, icon('download'), 'Save as file'))
+  ]);
+  redo();
+}
+
+/* ---------- Overview */
+PAGES.overview = function () {
+  var root = h('div.col-flex'), A = AUTO, live = A.live || {}, c = counts();
+  var gen = ts(A.generatedAt);
+  if (!live.ok && live.checkedAt) root.appendChild(h('div.banner.st-crit', null, icon('alert'), h('span.grow', null, 'The live server did not answer its health check at ' + fmtWhen(live.checkedAt) + '. ' + NAME + ' may be down or restarting.')));
+  if (gen && Date.now() - gen > 10 * 60 * 1000) root.appendChild(h('div.banner.st-wip', null, icon('clock'), h('span.grow', null, 'The data is from ' + fmtWhen(A.generatedAt) + '. The auto-update task "' + TASK + '" may have stopped: run "pilot.ps1 doctor" in the Pilot kit.')));
+  (A.warnings || []).forEach(function (w) { if (!/health/.test(w)) root.appendChild(h('div.banner.st-wip', null, icon('alert'), h('span.grow', null, w))); });
+  if (A.lock && !/free/i.test(A.lock.held || '')) root.appendChild(h('div.banner.st-wait', null, icon('server'), h('span.grow', null, rich('Live lock held by ' + A.lock.held + ': ' + A.lock.what + ' (since ' + A.lock.since + ')'))));
+
+  var next = nextRelease()[0];
+  var reqDone = M.reqs.filter(function (x) { return eff(x) === 'done'; }).length, reqPart = M.reqs.filter(function (x) { return eff(x) === 'part'; }).length;
+  var asksClosed = M.asks.filter(function (x) { return CLOSED[eff(x)]; }).length;
+  var chDone = M.checks.filter(function (x) { return CLOSED[eff(x)]; }).length;
+  var nOpen = openNotes(), nBy = {}; nOpen.forEach(function (n) { nBy[n.type] = (nBy[n.type] || 0) + 1; });
+  var qAll = queueItems(), qOpen = qAll.filter(function (x) { return !CLOSED[eff(x)]; });
+  function tile(label, ic, v, small, sub, to, bar) {
+    return h('button.tile', { onclick: function () { if (to) go(to); }, title: sub || '' }, h('div.tile-l', null, icon(ic), label), h('div.tile-v', null, v, small ? h('small', null, small) : null), bar || null, h('div.tile-s', null, sub || ''));
+  }
+  root.appendChild(h('div.tiles', null,
+    !A.live ? null : tile('Live server', 'server', live.ok ? (live.version || 'up') : 'down', live.ok ? 'db ' + live.db : '', 'Checked ' + fmtWhen(live.checkedAt) + ' · main ' + (((A.git || {}).main || {}).hash || ''), 'releases'),
+    tile('Built, not live', 'rocket', next ? next.version : '—', next ? next.unique + ' commits' : '', next ? next.name + ': ' + clean(next.subject) : 'Nothing waiting to go live', 'releases'),
+    tile('Requirements', 'target', String(reqDone), 'of ' + M.reqs.length + ' done', reqPart + ' partly · ' + (M.reqs.length - reqDone - reqPart) + ' open', 'reqs', stackBar(M.reqs)),
+    tile('Your asks', 'message', String(asksClosed), 'of ' + M.asks.length + ' closed', c.asksOpen + ' still open', 'asks', stackBar(M.asks)),
+    tile('Queue', 'queue', String(qOpen.length), 'open', qOpen[0] ? 'Now: ' + clean((qOpen[0].id ? qOpen[0].id + ' ' : '') + qOpen[0].title) : 'Queue empty', 'queue', stackBar(qAll)),
+    tile('Before rollout', 'shield', String(chDone), 'of ' + M.checks.length + ' done', c.checksOpen + ' shortcuts and checks left', 'checks', stackBar(M.checks)),
+    tile('Notebook', 'note', String(nOpen.length), 'open', Object.keys(nBy).map(function (k) { return nBy[k] + ' ' + NTYPE[k].label.toLowerCase() + (nBy[k] > 1 ? 's' : ''); }).join(' · ') || 'Add issues, features, questions', 'notebook'),
+    tile('Waiting on you', 'hourglass', String(c.waiting), 'items', 'Answers and steps only you can do', 'waiting')));
+
+  var qList = h('div.list', null, qOpen.length ? qOpen.slice(0, 9).map(function (x, i) {
+    return h('div.li', { 'data-key': x.key }, doneBox(x), h('span.id', null, x.id || (x.mineItem ? 'you' : '#' + (i + 1))), h('span.grow', { title: clean(x.title) }, rich(x.title)), statusSel(x));
+  }) : h('div.empty', null, 'Nothing open in the queue.'));
+  var wOpen = M.waiting.filter(function (x) { return !CLOSED[eff(x)]; });
+  var wList = h('div.list', null, wOpen.length ? wOpen.slice(0, 9).map(function (x) {
+    return h('div.li', { 'data-key': x.key }, doneBox(x), h('span.grow', { title: clean(x.title) + (x.state ? ' — ' + clean(x.state) : '') }, rich(x.title)), h('span.tag.src-tag', null, x.src));
+  }) : h('div.empty', null, 'Nothing waiting on you.'));
+  var quick = h('input.input', { placeholder: 'Quick add: ! issue  + feature  ? question  * idea   (Enter)', style: { width: '100%' }, 'aria-label': 'Quick add a note',
+    onkeydown: function (e) { if (e.key === 'Enter' && quick.value.trim()) { var p = parseQuick(quick.value); addNote({ title: p.title, type: p.type || 'issue', prio: p.prio, tags: p.tags }); toast('Added to your notebook.'); } } });
+  var nTop = sortNotes(nOpen, 'prio').slice(0, 8);
+  var nList = h('div', null, h('div', { style: { padding: '8px 12px', borderBottom: '1px solid var(--border)' } }, quick),
+    h('div.list', null, nTop.length ? nTop.map(function (n) {
+      return h('div.li', { 'data-key': n.id }, h('input.chk', { type: 'checkbox', 'aria-label': 'Done', onchange: function () { updNote(n.id, { status: 'done' }); } }),
+        h('span.prio', { class: n.prio }, n.prio.toUpperCase()), typeTag(n.type, true), h('button.grow', { style: { textAlign: 'left' }, onclick: function () { go('notebook'); editing = n.id; render(); } }, n.title));
+    }) : h('div.empty', null, 'No open notes. Type above to add one.')));
+  root.appendChild(h('div.grid.g3', null,
+    card('Queue: now and next', Math.min(9, qOpen.length) + ' of ' + qOpen.length + ' open', h('button.link', { onclick: function () { go('queue'); } }, 'Open queue →'), h('div.card-b.flush', null, qList)),
+    card('Waiting on you', wOpen.length + ' open', h('button.link', { onclick: function () { go('waiting'); } }, 'All →'), h('div.card-b.flush', null, wList)),
+    card('Notebook', nOpen.length + ' open', h('button.link', { onclick: function () { go('notebook'); } }, 'Open →'), h('div.card-b.flush', null, nList))));
+
+  var phList = h('div', null, M.phases.map(function (p) {
+    var done = p.items.filter(function (x) { return CLOSED[eff(x)]; }).length;
+    return h('button.phase-row', { onclick: function () { prefs.featPhase = p.id; savePrefs(); go('features'); } },
+      h('div.phase-top', null, h('span.name', null, p.title.replace(/^Phase (\d): /, 'P$1 · ')), p.auto ? pill(p.auto.status) : null,
+        h('span.meta', { title: p.auto ? clean(p.auto.state) : p.meta }, p.auto ? clean(p.auto.state).slice(0, 160) : p.meta), h('span.count', null, done + '/' + p.items.length)),
+      stackBar(p.items, true));
+  }));
+  var mx = h('div.matrix', null, M.reqs.map(function (r) {
+    var e = eff(r);
+    return h('button.cell', { class: 'st-' + e, title: '#' + r.id + ' ' + clean(r.title) + '\n' + ST[e] + '\n' + clean(r.state), onclick: function () { go('reqs', r.key); } }, h('b', null, '#' + r.id), h('span', null, clean(r.title)));
+  }));
+  var chOpen = M.checks.filter(function (x) { return !CLOSED[eff(x)]; });
+  var chList = h('div.list', null, chOpen.slice(0, 8).map(function (x) {
+    return h('div.li', { 'data-key': x.key }, doneBox(x), h('span.id', null, '#' + x.id), h('span.grow', { title: clean(x.what) }, rich(x.what)));
+  }));
+  root.appendChild(h('div.grid.g3', null,
+    card('Phases', 'feature map + PHASES.md', null, h('div.card-b.flush', null, phList), legend(['done', 'code', 'part', 'wip', 'wait', 'todo'])),
+    card('Requirements', reqDone + ' of ' + M.reqs.length + ' done', h('button.link', { onclick: function () { go('reqs'); } }, 'Table →'), h('div.card-b', null, mx), legend(['done', 'part', 'wip', 'wait', 'todo'])),
+    card('Before rollout', chDone + ' of ' + M.checks.length + ' done', h('button.link', { onclick: function () { go('checks'); } }, 'All →'), h('div.card-b.flush', null, h('div', { style: { padding: '8px 12px' } }, stackBar(M.checks, true)), chList))));
+
+  var brs = M.branches.filter(function (b) { return b.unique > 0; });
+  var brList = h('div.list', null, brs.length ? brs.map(function (b) {
+    return h('div.li', null, icon('branch'), h('span.mono', { style: { fontWeight: '600' } }, b.name), b.version ? h('span.tag', null, 'v' + b.version) : null,
+      h('span.grow.subtle', { title: clean(b.subject) }, b.unique + ' not on main · ' + clean(b.subject)), h('span.when', null, fmtWhen(b.at)));
+  }) : h('div.empty', null, 'Every branch is on main.'));
+  var logList = h('div.list', null, M.log.slice(0, 8).map(function (l) {
+    return h('div.li', { title: clean(l.title) }, h('span.when', null, String(l.when).slice(5)), h('span.tag', null, clean(l.who).slice(0, 18)), h('span.grow', null, rich(l.title)));
+  }));
+  var cmList = h('div.list', null, M.commits.slice(0, 8).map(function (cm) {
+    return h('div.li', { title: cm.title }, h('span.when', null, fmtWhen(cm.at)), h('span.id', null, cm.hash), h('span.grow', null, cm.title));
+  }));
+  root.appendChild(h('div.grid.g3', null,
+    card('Built, not live (branches)', brs.length + ' with work not on main', h('button.link', { onclick: function () { go('releases'); } }, 'Details →'), h('div.card-b.flush', null, brList)),
+    card('Coordination log', 'newest first', h('button.link', { onclick: function () { prefs.actTab = 'log'; savePrefs(); go('activity'); } }, 'All →'), h('div.card-b.flush', null, logList)),
+    card('Commits (all branches)', 'newest first', h('button.link', { onclick: function () { prefs.actTab = 'commits'; savePrefs(); go('activity'); } }, 'All →'), h('div.card-b.flush', null, cmList))));
+  return root;
+};
+
+/* ---------- Queue */
+var dragKey = null;
+function dragRow(tr, key, getKey, onDrop) {
+  tr.setAttribute('draggable', 'true');
+  tr.addEventListener('dragstart', function (ev) { getKey.set(key); tr.classList.add('dragging'); try { ev.dataTransfer.setData('text/plain', key); ev.dataTransfer.effectAllowed = 'move'; } catch (e) {} });
+  tr.addEventListener('dragend', function () { getKey.set(null); tr.classList.remove('dragging'); });
+  tr.addEventListener('dragover', function (ev) { var k = getKey.get(); if (!k || k === key) return; ev.preventDefault(); var r = tr.getBoundingClientRect(), after = ev.clientY > r.top + r.height / 2; tr.classList.toggle('drop-after', after); tr.classList.toggle('drop-before', !after); });
+  tr.addEventListener('dragleave', function () { tr.classList.remove('drop-after', 'drop-before'); });
+  tr.addEventListener('drop', function (ev) { ev.preventDefault(); var after = tr.classList.contains('drop-after'); tr.classList.remove('drop-after', 'drop-before'); var k = getKey.get(); if (!k || k === key) return; onDrop(k, after); });
+}
+var qDrag = { get: function () { return dragKey; }, set: function (v) { dragKey = v; } };
+PAGES.queue = function () {
+  var all = queueItems(), f = prefs.qFilter || 'open', q = prefs.qSearch || '';
+  var list = filterByStatus(all, f).filter(function (x) { return matches(x, q); });
+  var reorderable = (f === 'all' || f === 'open') && !q;
+  var title = h('input.input', { placeholder: 'Add a row at the end of the queue (Enter)', style: { flex: '1 1 320px' }, 'aria-label': 'Add a queue row',
+    onkeydown: function (e) { if (e.key === 'Enter' && title.value.trim()) { addQueueRow(title.value.trim()); toast('Added to the end of the queue.'); } } });
+  var tb = h('div.toolbar', null,
+    chipsFor('Status', statusChipOpts(all), f, function (v) { prefs.qFilter = v; savePrefs(); render(); }),
+    h('span.spacer'), localSearch('qSearch', 'Filter the queue'),
+    state.queueOrder.ids.length ? h('button.btn.ghost.sm', { onclick: function () { state.queueOrder = { ids: [], updated: nowIso() }; commit(); toast('Back to the order in REQUESTS.md.'); }, title: 'Forget your order and use the doc order' }, icon('refresh'), 'Reset order') : null);
+  var rows = list.map(function (x) {
+    var pos = all.indexOf(x) + 1, e = eff(x), m = state.marks[x.key] || {};
+    var tr = h('tr', { 'data-key': x.key, class: CLOSED[e] ? 'is-done' : null });
+    if (reorderable) dragRow(tr, x.key, qDrag, function (k, after) {
+      var keys = all.map(function (y) { return y.key; }).filter(function (y) { return y !== k; });
+      keys.splice(keys.indexOf(x.key) + (after ? 1 : 0), 0, k); setQueueOrder(keys);
+    });
+    add(tr, [
+      h('td', { style: { width: '26px' } }, reorderable ? h('span.grip', { title: 'Drag to reorder' }, icon('grip')) : null),
+      h('td.subtle', { style: { width: '30px' } }, String(pos)),
+      h('td', { style: { width: '24px' } }, doneBox(x)),
+      h('td.id', { style: { width: '56px' } }, x.mineItem ? h('span.tag', null, 'you') : x.id),
+      h('td.t-main', null, h('div.ttl', null, rich(x.title)), m.note ? h('div.subtle', { style: { fontSize: '12px', display: 'flex', gap: '4px', alignItems: 'center' } }, icon('pen'), m.note) : null),
+      h('td.w-state', null, clampText(x.state)),
+      h('td', null, statusSel(x)),
+      h('td', null, h('div.row-actions', null,
+        h('button.btn-icon.sm', { title: 'Move to the top', 'aria-label': 'Move to the top', onclick: function () { moveInQueue(x.key, 'top'); } }, icon('top')),
+        h('button.btn-icon.sm', { title: 'Up', 'aria-label': 'Move up', onclick: function () { moveInQueue(x.key, 'up'); } }, icon('up')),
+        h('button.btn-icon.sm', { title: 'Down', 'aria-label': 'Move down', onclick: function () { moveInQueue(x.key, 'down'); } }, icon('down')),
+        h('button.btn-icon.sm', { title: 'Move to the bottom', 'aria-label': 'Move to the bottom', onclick: function () { moveInQueue(x.key, 'bottom'); } }, icon('bottom')),
+        h('button.btn-icon.sm', { title: 'Your note on this row', 'aria-label': 'Note', onclick: function () { var v = prompt('Your note on this row (empty removes it):', m.note || ''); if (v === null) return; var mm = state.marks[x.key] || { status: null }; mm.note = v.trim(); mm.updated = nowIso(); mm.label = clean(x.title).slice(0, 140); state.marks[x.key] = mm; commit(); } }, icon('pen')),
+        x.mineItem ? h('button.btn-icon.sm', { title: 'Delete this row', 'aria-label': 'Delete', onclick: function () { delete state.myQueue[x.key]; state.deleted[x.key] = nowIso(); commit(); } }, icon('trash')) : null))
+    ]);
+    return tr;
+  });
+  return h('div.col-flex', null,
+    h('div.banner.st-code', null, icon('queue'), h('span.grow', null, 'Rows come from the Queue in REQUESTS.md and refresh by themselves. Your order, ticks, notes and added rows go to panel.json, which Claude sessions read before they take the next item. A new row from the docs lands at the end.')),
+    h('section.card', null, h('div.qadd', null, icon('plus'), title, h('span.subtle', { style: { fontSize: '12px' } }, 'Drag rows, use the arrows, or Alt+↑/↓ on a focused row')), tb,
+      h('div.card-b.flush', null, h('div.tbl-wrap', null, h('table.tbl', null,
+        h('thead', null, h('tr', null, h('th'), h('th', null, '#'), h('th', { title: 'Done' }, icon('check')), h('th', null, 'ID'), h('th', null, 'Work'), h('th', null, 'State (docs)'), h('th', null, 'Status'), h('th'))),
+        h('tbody', null, rows.length ? rows : h('tr', null, h('td', { colspan: '8' }, h('div.empty', null, 'No rows match.')))))))));
+};
+
+/* ---------- Notebook */
+var nDragId = null;
+var nDrag = { get: function () { return nDragId; }, set: function (v) { nDragId = v; } };
+function noteEditor(n) {
+  var t = h('input.input', { value: n.title, style: { fontWeight: '600', fontSize: '14px' }, 'aria-label': 'Title', oninput: function () { updNote(n.id, { title: t.value }, true); } });
+  var b = h('textarea.textarea', { placeholder: 'Details, steps, what you saw, links…', rows: '5', 'aria-label': 'Details', oninput: function () { updNote(n.id, { body: b.value }, true); } }); b.value = n.body || '';
+  var an = h('textarea.textarea', { placeholder: n.type === 'question' ? 'The answer (Claude can write it here too)' : 'Outcome / resolution', rows: '2', 'aria-label': 'Answer', oninput: function () { updNote(n.id, { answer: an.value }, true); } }); an.value = n.answer || '';
+  function sel(field, opts, labels) {
+    var s = h('select.select', { onchange: function () { var p = {}; p[field] = s.value; updNote(n.id, p); } }, opts.map(function (o) { return h('option', { value: o, selected: (n[field] || '') === o ? true : null }, labels ? labels[o] : (o || '—')); }));
+    return s;
+  }
+  var typeLabels = {}; for (var k in NTYPE) typeLabels[k] = NTYPE[k].label;
+  var tags = h('input.input', { value: (n.tags || []).join(', '), placeholder: 'comma separated', onchange: function () { updNote(n.id, { tags: tags.value.split(',').map(function (x) { return x.trim().replace(/^#/, ''); }).filter(Boolean) }); } });
+  setTimeout(function () { if (!n.title) t.focus(); }, 0);
+  return h('div.editor', { 'data-key': n.id },
+    h('div.fields', null, h('label', null, 'Title', t), h('label', null, 'Details', b), h('label', null, n.type === 'question' ? 'Answer' : 'Outcome', an)),
+    h('div.side-f', null,
+      h('label', null, 'Type', sel('type', Object.keys(NTYPE), typeLabels)),
+      h('label', null, 'Priority', sel('prio', Object.keys(PRIO), PRIO)),
+      h('label', null, 'Status', sel('status', NST_ORDER, NST)),
+      h('label', null, 'Area', sel('area', [''].concat(AREAS))),
+      h('label.full', null, 'Tags', tags),
+      h('div.full.subtle', { style: { fontSize: '11.5px' } }, 'Created ' + fmtWhen(n.created) + ' · changed ' + ago(n.updated) + (n.doneAt ? ' · done ' + fmtWhen(n.doneAt) : '') + (n.by ? ' · by ' + n.by : ''))),
+    h('div.acts', null,
+      h('button.btn.sm.primary', { onclick: function () { editing = null; render(); } }, icon('check'), 'Close'),
+      n.queued && state.myQueue[n.queued] ? h('span.tag', null, 'In the queue') : h('button.btn.sm', { onclick: function () { noteToQueue(n); }, title: 'Add as a row at the end of the queue' }, icon('send'), 'Send to queue'),
+      h('button.btn.sm', { onclick: function () { copyText(noteText(n)); toast('Copied. Paste it in a Claude chat.'); } }, icon('copy'), 'Copy for Claude'),
+      h('span.spacer'),
+      h('button.btn.sm.danger', { onclick: function () { editing = null; delNote(n.id); } }, icon('trash'), 'Delete')));
+}
+PAGES.notebook = function () {
+  var all = notesList(), tf = prefs.nType || 'all', sf = prefs.nStatus || 'open', sortBy = prefs.nSort || 'prio', groupBy = prefs.nGroup || 'none', q = prefs.nSearch || '';
+  var byType = all.filter(function (n) { return (tf === 'all' || n.type === tf) && matches(n, q); });
+  var list = sortNotes(byType.filter(function (n) { return sf === 'all' ? true : sf === 'open' ? isOpenNote(n) : n.status === sf; }), sortBy);
+  var typeSel = h('select.select', { 'aria-label': 'Type of the new note' }, Object.keys(NTYPE).map(function (k) { return h('option', { value: k, selected: k === (prefs.nNewType || 'issue') ? true : null }, NTYPE[k].label); }));
+  var prSel = h('select.select.adv-only', { 'aria-label': 'Priority' }, Object.keys(PRIO).map(function (k) { return h('option', { value: k, selected: k === 'p2' ? true : null }, PRIO[k]); }));
+  var arSel = h('select.select.adv-only', { 'aria-label': 'Area' }, [h('option', { value: '' }, 'Area')].concat(AREAS.map(function (a) { return h('option', { value: a }, a); })));
+  var inp = h('input.input.big#quickAdd', { placeholder: 'Write an issue, feature, question or idea, press Enter   (! issue · + feature · ? question · * idea · !p0 · #tag)', 'aria-label': 'New note',
+    onkeydown: function (e) {
+      if (e.key !== 'Enter' || !inp.value.trim()) return;
+      var p = parseQuick(inp.value);
+      prefs.nNewType = typeSel.value; savePrefs();
+      var n = addNote({ title: p.title, type: p.type || typeSel.value, prio: p.prio || prSel.value, area: arSel.value, tags: p.tags });
+      if (e.shiftKey) { editing = n.id; render(); }
+      setTimeout(function () { var x = document.getElementById('quickAdd'); if (x) x.focus(); }, 0);
+    } });
+  var addBar = h('div.qadd', null, icon('plus'), typeSel, inp, prSel, arSel, h('span.subtle', { style: { fontSize: '11.5px' } }, 'Shift+Enter opens it'));
+  var typeOpts = [{ v: 'all', l: 'All', n: all.length }].concat(Object.keys(NTYPE).map(function (k) { return { v: k, l: NTYPE[k].label, icon: NTYPE[k].icon, n: all.filter(function (n) { return n.type === k; }).length }; }));
+  var stOpts = [{ v: 'open', l: 'Not done', n: all.filter(isOpenNote).length }, { v: 'all', l: 'All', n: all.length }].concat(NST_ORDER.map(function (k) { return { v: k, l: NST[k], n: all.filter(function (n) { return n.status === k; }).length }; }));
+  function selPref(key, opts, cur, label) { var s = h('select.select', { 'aria-label': label, onchange: function () { prefs[key] = s.value; savePrefs(); render(); } }, opts.map(function (o) { return h('option', { value: o[0], selected: o[0] === cur ? true : null }, label + ': ' + o[1]); })); return s; }
+  var tb = h('div.toolbar', null, chipsFor('Type', typeOpts, tf, function (v) { prefs.nType = v; savePrefs(); render(); }), h('span.spacer'),
+    nbView === 'list' ? chipsFor('Status', stOpts, sf, function (v) { prefs.nStatus = v; savePrefs(); render(); }) : null);
+  var tb2 = h('div.toolbar', null,
+    localSearch('nSearch', 'Filter notes'),
+    selPref('nSort', [['prio', 'Priority'], ['manual', 'My order (drag)'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['updated', 'Last changed'], ['type', 'Type'], ['status', 'Status'], ['title', 'Title A–Z']], sortBy, 'Sort'),
+    nbView === 'list' && mode === 'advanced' ? selPref('nGroup', [['none', 'None'], ['type', 'Type'], ['status', 'Status'], ['prio', 'Priority'], ['area', 'Area']], groupBy, 'Group') : null,
+    h('span.spacer'),
+    h('button.btn.ghost.sm', { title: 'Copy every open note as text for a Claude chat', onclick: function () { var o = sortNotes(openNotes(), 'prio'); copyText('My open ' + NAME + ' notes (' + o.length + '):\n\n' + o.map(function (n, i) { return (i + 1) + '. ' + noteText(n); }).join('\n\n')); toast('Copied ' + o.length + ' open notes.'); } }, icon('copy'), 'Copy open for Claude'),
+    h('div.seg', { role: 'group', 'aria-label': 'View' },
+      h('button', { 'aria-pressed': nbView === 'list' ? 'true' : 'false', onclick: function () { nbView = prefs.nbView = 'list'; savePrefs(); render(); } }, icon('list'), 'List'),
+      h('button', { 'aria-pressed': nbView === 'board' ? 'true' : 'false', onclick: function () { nbView = prefs.nbView = 'board'; savePrefs(); render(); } }, icon('board'), 'Board')));
+  var body = nbView === 'board' ? notesBoard(byType, sortBy) : notesTable(list, groupBy, sortBy);
+  var info = !all.length ? h('div.banner.st-code', null, icon('note'), h('span.grow', null, 'Your notebook for anything about ' + NAME + ': issues you saw, features you want, questions for Claude, ideas. It saves in this browser at once. Link panel.json (bottom left) so Claude sessions read it too.')) : null;
+  return h('div.col-flex', null, info, h('section.card', null, addBar, tb, tb2, h('div.card-b.flush', null, body)));
+};
+function notesTable(list, groupBy, sortBy) {
+  if (!list.length) return h('div.empty', null, 'No notes match. Add one above.');
+  var groups = [{ k: '', items: list }];
+  if (groupBy !== 'none') {
+    var map = {}, keys = [];
+    list.forEach(function (n) { var k = groupBy === 'type' ? n.type : groupBy === 'status' ? n.status : groupBy === 'prio' ? n.prio : (n.area || '—'); if (!map[k]) { map[k] = []; keys.push(k); } map[k].push(n); });
+    var ord = groupBy === 'type' ? Object.keys(NTYPE) : groupBy === 'status' ? NST_ORDER : groupBy === 'prio' ? Object.keys(PRIO) : AREAS.concat(['—']);
+    keys.sort(function (a, b) { return ord.indexOf(a) - ord.indexOf(b); });
+    groups = keys.map(function (k) { return { k: k, items: map[k] }; });
+  }
+  var tbody = h('tbody');
+  groups.forEach(function (g) {
+    if (g.k) tbody.appendChild(h('tr', null, h('td', { colspan: '9', style: { background: 'var(--surface-2)', fontWeight: '600', fontSize: '12px' } },
+      groupBy === 'type' ? (NTYPE[g.k] || NTYPE.note).label : groupBy === 'status' ? NST[g.k] : groupBy === 'prio' ? PRIO[g.k] : g.k, h('span.subtle', null, '  ' + g.items.length))));
+    g.items.forEach(function (n) {
+      var tr = h('tr', { 'data-key': n.id, class: isOpenNote(n) ? null : 'is-done', tabindex: '0',
+        onkeydown: function (e) { if (e.key === 'Enter' && e.target === tr) { editing = editing === n.id ? null : n.id; render(); } } });
+      if (sortBy === 'manual') dragRow(tr, n.id, nDrag, function (k, after) {
+        var ids = sortNotes(notesList(), 'manual').map(function (x) { return x.id; }).filter(function (x) { return x !== k; });
+        ids.splice(ids.indexOf(n.id) + (after ? 1 : 0), 0, k); state.notesOrder = { ids: ids, updated: nowIso() }; commit();
+      });
+      var stSel = h('select.psel', { class: 'n-' + n.status, 'aria-label': 'Status', onclick: function (e) { e.stopPropagation(); }, onchange: function () { updNote(n.id, { status: stSel.value }); } }, NST_ORDER.map(function (k) { return h('option', { value: k, selected: k === n.status ? true : null }, NST[k]); }));
+      add(tr, [
+        h('td', { style: { width: '26px' } }, sortBy === 'manual' ? h('span.grip', { title: 'Drag to reorder' }, icon('grip')) : null),
+        h('td', { style: { width: '24px' } }, h('input.chk', { type: 'checkbox', checked: n.status === 'done', 'aria-label': 'Done', onchange: function () { updNote(n.id, { status: n.status === 'done' ? 'open' : 'done' }); } })),
+        h('td', { style: { width: '38px' } }, h('span.prio', { class: n.prio, title: PRIO[n.prio] }, String(n.prio).toUpperCase())),
+        h('td', { style: { width: '92px' } }, typeTag(n.type)),
+        h('td.t-main', { style: { cursor: 'pointer' }, onclick: function () { editing = editing === n.id ? null : n.id; render(); } },
+          h('div.ttl', null, mark(n.title)), n.body ? h('div.body-preview', null, mark(n.body.split('\n')[0])) : null,
+          n.answer ? h('div.body-preview', { style: { color: 'var(--ans-text)' } }, '↳ ', mark(n.answer.split('\n')[0])) : null),
+        h('td', null, (n.tags || []).map(function (t) { return h('span.tag', { style: { marginRight: '3px' } }, '#' + t); }), n.area ? h('span.tag', null, n.area) : null, n.queued && state.myQueue[n.queued] ? h('span.tag', { title: 'In the queue', style: { marginLeft: '3px' } }, 'queued') : null),
+        h('td', null, stSel),
+        h('td.when', { title: 'Created ' + fmtWhen(n.created) + ', changed ' + fmtWhen(n.updated) }, ago(n.updated)),
+        h('td', null, h('div.row-actions', null,
+          h('button.btn-icon.sm', { title: 'Send to queue', 'aria-label': 'Send to queue', onclick: function () { noteToQueue(n); } }, icon('send')),
+          h('button.btn-icon.sm', { title: 'Copy for Claude', 'aria-label': 'Copy', onclick: function () { copyText(noteText(n)); toast('Copied.'); } }, icon('copy')),
+          h('button.btn-icon.sm', { title: 'Delete', 'aria-label': 'Delete', onclick: function () { delNote(n.id); } }, icon('trash'))))
+      ]);
+      tbody.appendChild(tr);
+      if (editing === n.id) tbody.appendChild(h('tr', null, h('td', { colspan: '9', style: { padding: '0' } }, noteEditor(n))));
+    });
+  });
+  return h('div.tbl-wrap', null, h('table.tbl', null, h('thead', null, h('tr', null, h('th'), h('th', null, icon('check')), h('th', null, 'Prio'), h('th', null, 'Type'), h('th', null, 'Title'), h('th', null, 'Tags'), h('th', null, 'Status'), h('th', null, 'Changed'), h('th'))), tbody));
+}
+function notesBoard(list, sortBy) {
+  var wrap = h('div');
+  if (editing && state.notes[editing]) wrap.appendChild(noteEditor(state.notes[editing]));
+  wrap.appendChild(h('div.board', null, NST_ORDER.map(function (st) {
+    var items = sortNotes(list.filter(function (n) { return n.status === st; }), sortBy);
+    var col = h('div.col', { class: 'n-' + st, 'aria-label': NST[st],
+      ondragover: function (e) { if (nDragId) { e.preventDefault(); col.classList.add('over'); } },
+      ondragleave: function () { col.classList.remove('over'); },
+      ondrop: function (e) { e.preventDefault(); col.classList.remove('over'); var id = nDragId; nDragId = null; if (id && state.notes[id] && state.notes[id].status !== st) updNote(id, { status: st }); } },
+      h('div.col-h', null, h('span.dot'), NST[st], h('span.subtle', null, String(items.length))),
+      h('div.col-b', null, items.map(function (n) {
+        return h('div.ncard', { draggable: 'true', 'data-key': n.id, tabindex: '0', class: editing === n.id ? 'sel' : null,
+          ondragstart: function () { nDragId = n.id; }, ondragend: function () { nDragId = null; },
+          onclick: function () { editing = editing === n.id ? null : n.id; render(); },
+          onkeydown: function (e) { if (e.key === 'Enter') { editing = n.id; render(); } } },
+          h('div.m', null, h('span.prio', { class: n.prio }, String(n.prio).toUpperCase()), typeTag(n.type), n.area ? h('span.tag', null, n.area) : null),
+          h('div.t', null, mark(n.title)),
+          (n.tags || []).length ? h('div.m', null, n.tags.map(function (t) { return h('span.tag', null, '#' + t); })) : null,
+          h('div.m', null, ago(n.updated), n.answer ? ' · answered' : ''));
+      })));
+    return col;
+  })));
+  return wrap;
+}
+
+/* ---------- Board: every kind of item as cards in status columns; drag a card to change its status */
+var KCOLS = [
+  { st: 'todo', label: 'Not started' }, { st: 'wip', label: 'In progress' }, { st: 'code', label: 'Built, not live' },
+  { st: 'part', label: 'Partly done' }, { st: 'wait', label: 'Waiting on you / office' }, { st: 'done', label: 'Done' }
+];
+var KSRC = [
+  { v: 'queue', l: 'Queue', icon: 'queue' }, { v: 'notes', l: 'Notebook', icon: 'note' }, { v: 'asks', l: 'Asks', icon: 'message' },
+  { v: 'reqs', l: 'Requirements', icon: 'target' }, { v: 'features', l: 'Features', icon: 'layers' }, { v: 'checks', l: 'Before rollout', icon: 'shield' },
+  { v: 'waiting', l: 'Waiting on you', icon: 'hourglass' }
+];
+var N2K = { open: 'todo', doing: 'wip', waiting: 'wait', done: 'done', wontdo: 'done' };
+var K2N = { todo: 'open', wip: 'doing', code: 'doing', part: 'doing', wait: 'waiting', done: 'done' };
+var kDrag = null;
+function kItems(src) {
+  if (src === 'notes') return notesList().map(function (n) { return { kind: 'note', key: n.id, note: n, title: n.title, id: '', st: N2K[n.status] || 'todo', go: 'notebook' }; });
+  var list = src === 'queue' ? queueItems() : src === 'asks' ? M.asks : src === 'reqs' ? M.reqs : src === 'features' ? M.features : src === 'checks' ? M.checks : M.waiting;
+  return list.map(function (x) { var e = eff(x); return { kind: src, key: x.key, item: x, title: x.title || x.what, id: x.id, st: CLOSED[e] ? 'done' : e, go: src }; });
+}
+function kMove(card, st) {
+  if (card.st === st) return;
+  if (card.kind === 'note') { updNote(card.note.id, { status: K2N[st] }); return; }
+  setMark(card.item, st);
+}
+PAGES.kanban = function () {
+  var src = prefs.kSrc || ['queue', 'notes'], q = prefs.kSearch || '', showAllDone = !!prefs.kAllDone;
+  var cards = [];
+  src.forEach(function (s) { kItems(s).forEach(function (c) { if (!q || matches(c.item || c.note, q)) cards.push(c); }); });
+  var srcLabel = {}; KSRC.forEach(function (s) { srcLabel[s.v] = s.l; });
+  var tb = h('div.toolbar', null,
+    h('div.chips', { role: 'group', 'aria-label': 'Show' }, KSRC.map(function (s) {
+      var on = src.indexOf(s.v) >= 0;
+      return h('button.chip', { 'aria-pressed': on ? 'true' : 'false', onclick: function () {
+        var next = on ? src.filter(function (x) { return x !== s.v; }) : src.concat([s.v]);
+        prefs.kSrc = next.length ? next : [s.v]; savePrefs(); render(); } }, icon(s.icon), s.l, h('span.cnt', null, String(kItems(s.v).length)));
+    })),
+    h('span.spacer'),
+    h('label', { style: { display: 'inline-flex', gap: '6px', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' } },
+      h('input.chk', { type: 'checkbox', checked: showAllDone, onchange: function () { prefs.kAllDone = !showAllDone; savePrefs(); render(); } }), 'All done cards'),
+    localSearch('kSearch', 'Filter cards'));
+  var board = h('div.board.kanban', null, KCOLS.map(function (col) {
+    var items = cards.filter(function (c) { return c.st === col.st || (col.st === 'done' && CLOSED[c.st]); });
+    var shown = col.st === 'done' && !showAllDone ? items.slice(0, 25) : items;
+    var el = h('div.col', { class: 'st-' + col.st, 'aria-label': col.label,
+      ondragover: function (e) { if (kDrag) { e.preventDefault(); el.classList.add('over'); } },
+      ondragleave: function (e) { if (!el.contains(e.relatedTarget)) el.classList.remove('over'); },
+      ondrop: function (e) {
+        e.preventDefault(); el.classList.remove('over');
+        var c = kDrag; kDrag = null; if (!c) return;
+        var target = e.target.closest && e.target.closest('.ncard[data-key]');
+        // Dropping a queue card on another queue card also moves it before that card in the queue.
+        if (c.kind === 'queue' && target && target.getAttribute('data-kind') === 'queue' && target.getAttribute('data-key') !== c.key) {
+          var keys = queueItems().map(function (y) { return y.key; }).filter(function (k) { return k !== c.key; });
+          keys.splice(keys.indexOf(target.getAttribute('data-key')), 0, c.key);
+          state.queueOrder = { ids: keys, updated: nowIso() };
+          if (c.st === col.st) { commit(); return; }
+        }
+        kMove(c, col.st);
+      } },
+      h('div.col-h', null, h('span.dot'), col.label, h('span.subtle', null, String(items.length))),
+      h('div.col-b', null, shown.map(function (c) {
+        var mine = c.item ? isMine(c.item) : false;
+        return h('div.ncard', { draggable: 'true', 'data-key': c.key, 'data-kind': c.kind, tabindex: '0', title: clean(c.title) + '\nDrag to another column to change its status. Enter opens it.',
+          class: mine ? 'sel' : null,
+          ondragstart: function (e) { kDrag = c; try { e.dataTransfer.setData('text/plain', c.key); e.dataTransfer.effectAllowed = 'move'; } catch (x) {} },
+          ondragend: function () { kDrag = null; },
+          onkeydown: function (e) { if (e.key === 'Enter') { if (c.kind === 'note') { go('notebook'); editing = c.key; render(); } else go(c.go, c.key); } },
+          ondblclick: function () { if (c.kind === 'note') { go('notebook'); editing = c.key; render(); } else go(c.go, c.key); } },
+          h('div.m', null, h('span.tag', null, srcLabel[c.kind === 'note' ? 'notes' : c.kind]), c.id ? h('span.id', null, (/^\d/.test(c.id) ? '#' : '') + c.id) : null,
+            c.note ? h('span.prio', { class: c.note.prio }, String(c.note.prio).toUpperCase()) : null, c.note ? typeTag(c.note.type, true) : null,
+            mine ? h('span', { style: { color: 'var(--primary)', fontWeight: '600' }, title: 'Status set by you' }, '● you') : null),
+          h('div.t.clamp', null, rich(c.title)));
+      }), shown.length < items.length ? h('button.link', { style: { padding: '4px' }, onclick: function () { prefs.kAllDone = true; savePrefs(); render(); } }, 'Show ' + (items.length - shown.length) + ' more') : null));
+    return el;
+  }));
+  return h('div.col-flex', null,
+    h('div.banner.st-code', null, icon('board'), h('span.grow', null, 'Drag a card to another column to change its status (Undo appears below). On queue cards, dropping onto another card also moves it in the queue. Double-click or Enter opens the item. Your changes save to panel.json by themselves.')),
+    h('section.card', null, tb, h('div.card-b.flush', null, board)));
+};
+
+/* ---------- Waiting on you */
+PAGES.waiting = function () {
+  var f = prefs.wFilter || 'open', q = prefs.wSearch || '';
+  var list = filterByStatus(M.waiting, f).filter(function (x) { return matches(x, q); });
+  var tb = h('div.toolbar', null, chipsFor('Show', [{ v: 'open', l: 'Open', n: M.waiting.filter(function (x) { return !CLOSED[eff(x)]; }).length }, { v: 'all', l: 'All', n: M.waiting.length }, { v: 'done', l: 'Done by you', n: M.waiting.filter(function (x) { return eff(x) === 'done'; }).length }], f, function (v) { prefs.wFilter = v; savePrefs(); render(); }), h('span.spacer'), localSearch('wSearch', 'Filter'));
+  var qs = notesList().filter(function (n) { return n.type === 'question' && isOpenNote(n); });
+  var rows = list.map(function (x) {
+    return h('tr', { 'data-key': x.key, class: CLOSED[eff(x)] ? 'is-done' : null },
+      h('td', { style: { width: '24px' } }, doneBox(x)),
+      h('td.t-main', null, h('div.ttl', null, rich(x.title)), x.state ? h('div.subtle', { style: { fontSize: '12px' } }, rich(x.state)) : null),
+      h('td.adv-only', { style: { width: '110px' } }, h('span.tag', null, x.src)));
+  });
+  return h('div.col-flex', null,
+    h('div.banner.st-wait', null, icon('hourglass'), h('span.grow', null, 'Read from RESUME.md and REQUESTS.md ("Waiting on…") plus the board file. Tick what you have done; Claude sessions see your ticks in panel.json.')),
+    h('section.card', null, tb, h('div.card-b.flush', null, h('div.tbl-wrap', null, h('table.tbl', null, h('thead', null, h('tr', null, h('th', null, icon('check')), h('th', null, 'What'), h('th.adv-only', null, 'From'))), h('tbody', null, rows.length ? rows : h('tr', null, h('td', { colspan: '3' }, h('div.empty', null, 'Nothing here.')))))))),
+    qs.length ? card('Your open questions', qs.length + ' in the notebook', h('button.link', { onclick: function () { prefs.nType = 'question'; savePrefs(); go('notebook'); } }, 'Open →'),
+      h('div.card-b.flush', null, h('div.list', null, qs.map(function (n) { return h('div.li', null, typeTag('question', true), h('span.grow', null, n.title), h('span.when', null, ago(n.updated))); })))) : null);
+};
+
+/* ---------- Doc table pages */
+function docPage(o) {
+  var list = o.list, f = prefs[o.fKey] || o.defF || 'all', q = prefs[o.sKey] || '';
+  var shown = sortList(filterByStatus(list, f).filter(function (x) { return matches(x, q); }), o.sortKey, o.getters || {});
+  var tb = h('div.toolbar', null, chipsFor('Status', statusChipOpts(list), f, function (v) { prefs[o.fKey] = v; savePrefs(); render(); }), h('span.spacer'), o.extra || null, localSearch(o.sKey, 'Filter'));
+  var rows = shown.map(function (x) { var tr = h('tr', { 'data-key': x.key, class: CLOSED[eff(x)] ? 'is-done' : null }); add(tr, o.row(x)); return tr; });
+  return h('div.col-flex', null, o.top || null,
+    h('section.card', null, h('div.card-h', null, h('h2', null, o.title), h('span.sub', null, shown.length + ' shown of ' + list.length), h('span.spacer'), stackBar(list, false, '220px')), tb,
+      h('div.card-b.flush', null, h('div.tbl-wrap', null, h('table.tbl', null, h('thead', null, h('tr', null, o.head())), h('tbody', null, rows.length ? rows : h('tr', null, h('td', { colspan: '9' }, h('div.empty', null, 'No rows match.'))))))),
+      o.foot ? h('div.card-f', null, o.foot) : null));
+}
+PAGES.reqs = function () {
+  return docPage({ title: 'Requirements', list: M.reqs, fKey: 'rF', sKey: 'rS', sortKey: 'rSort',
+    getters: { id: function (x) { return parseInt(x.id, 10) || 0; }, status: function (x) { return stRank[eff(x)]; } },
+    top: h('section.card', null, h('div.card-b', null, h('div.matrix', null, M.reqs.map(function (r) { var e = eff(r); return h('button.cell', { class: 'st-' + e, title: clean(r.state), onclick: function () { go('reqs', r.key); } }, h('b', null, '#' + r.id), h('span', null, clean(r.title))); }))), h('div.card-f', null, legend(['done', 'part', 'wip', 'wait', 'todo']))),
+    head: function () { return [h('th', null, icon('check')), sortHead('#', 'id', 'rSort'), h('th', null, 'Requirement'), sortHead('Status', 'status', 'rSort'), h('th', null, 'Where it stands (PROGRESS.md)')]; },
+    row: function (x) { return [h('td', { style: { width: '24px' } }, doneBox(x)), h('td.id', null, '#' + x.id), h('td.t-main', { style: { width: '26%' } }, h('div.ttl', null, rich(x.title))), h('td', null, statusSel(x)), h('td.w-state', { style: { maxWidth: '820px' } }, clampText(x.state))]; },
+    foot: srcFoot('progress') });
+};
+PAGES.asks = function () {
+  var tab = prefs.askTab || 'list';
+  var seg = h('div.seg', null, h('button', { 'aria-pressed': tab === 'list' ? 'true' : 'false', onclick: function () { prefs.askTab = 'list'; savePrefs(); render(); } }, 'Request list (' + M.asks.length + ')'),
+    h('button', { 'aria-pressed': tab === 'older' ? 'true' : 'false', onclick: function () { prefs.askTab = 'older'; savePrefs(); render(); } }, 'Earlier sessions (' + M.older.length + ')'));
+  if (tab === 'older') return docPage({ title: 'Asks from the earlier sessions', list: M.older, fKey: 'oF', sKey: 'oS', sortKey: 'oSort', extra: seg,
+    getters: { session: function (x) { return x.session; }, status: function (x) { return stRank[eff(x)]; } },
+    head: function () { return [h('th', null, icon('check')), h('th', null, 'Date'), sortHead('Session', 'session', 'oSort'), h('th', null, 'You asked'), sortHead('Status', 'status', 'oSort'), h('th', null, 'Answer')]; },
+    row: function (x) { return [h('td', { style: { width: '24px' } }, doneBox(x)), h('td.when', null, x.date), h('td.subtle', { style: { fontSize: '12px', maxWidth: '180px' } }, x.session), h('td.t-main', null, h('div.ttl', null, rich(x.title))), h('td', null, statusSel(x)), h('td.w-state', null, clampText(x.state))]; },
+    foot: 'From the board file data.js (history).' });
+  return docPage({ title: 'Every ask since 4 Oct', list: M.asks, fKey: 'aF', sKey: 'aS', sortKey: 'aSort', extra: seg,
+    getters: { id: function (x) { var n = parseInt(x.id, 10); return isNaN(n) ? -1 : n; }, status: function (x) { return stRank[eff(x)]; } },
+    head: function () { return [h('th', null, icon('check')), sortHead('#', 'id', 'aSort'), h('th', null, 'Date'), h('th', null, 'You asked'), sortHead('Status', 'status', 'aSort'), h('th', null, 'State'), h('th', null, 'Notes')]; },
+    row: function (x) { return [h('td', { style: { width: '24px' } }, doneBox(x)), h('td.id', null, x.id), h('td.when', null, x.date), h('td.t-main', null, clampText(x.title, 'ttl')), h('td', null, statusSel(x)), h('td.w-state', { style: { maxWidth: '280px' } }, clampText(x.state)), h('td.w-state', null, clampText(x.notes))]; },
+    foot: srcFoot('requests') });
+};
+PAGES.checks = function () {
+  var done = M.checks.filter(function (x) { return CLOSED[eff(x)]; }).length;
+  return docPage({ title: 'Before the department rollout', list: M.checks, fKey: 'cF', sKey: 'cS', sortKey: 'cSort', defF: 'open',
+    getters: { id: function (x) { return parseInt(x.id, 10) || 0; }, since: function (x) { return x.since; } },
+    top: h('div.banner.st-wait', null, icon('shield'), h('span.grow', null, done + ' of ' + M.checks.length + ' done. Every test shortcut and every "only tested offline" item must be ticked before the rollout.')),
+    head: function () { return [h('th', null, icon('check')), sortHead('#', 'id', 'cSort'), h('th', null, 'Shortcut / not checked yet'), sortHead('Since', 'since', 'cSort'), h('th', null, 'Change it to'), h('th', null, 'How')]; },
+    row: function (x) { return [h('td', { style: { width: '24px' } }, doneBox(x)), h('td.id', null, '#' + x.id), h('td.t-main', null, clampText(x.what, 'ttl')), h('td.when', null, x.since), h('td.w-state', { style: { maxWidth: '260px' } }, clampText(x.target)), h('td.w-state', null, clampText(x.how))]; },
+    foot: srcFoot('checks') });
+};
+PAGES.features = function () {
+  var pf = prefs.featPhase || 'all', f = prefs.fF || 'all', q = prefs.fS || '';
+  var phOpts = [{ v: 'all', l: 'All phases', n: M.features.length }].concat(M.phases.map(function (p) { return { v: p.id, l: p.title.replace(/^Phase (\d):.*/, 'Phase $1').replace('Added along the way', 'Extras'), n: p.items.length }; }));
+  var root = h('div.col-flex', null,
+    h('section.card', null, h('div.toolbar', null, chipsFor('Phase', phOpts, pf, function (v) { prefs.featPhase = v; savePrefs(); render(); })),
+      h('div.toolbar', { style: { borderBottom: '0' } }, chipsFor('Status', statusChipOpts(M.features), f, function (v) { prefs.fF = v; savePrefs(); render(); }), h('span.spacer'), localSearch('fS', 'Filter features'))));
+  M.phases.forEach(function (p) {
+    if (pf !== 'all' && pf !== p.id) return;
+    var items = filterByStatus(p.items, f).filter(function (x) { return matches(x, q); });
+    if (!items.length && (q || f !== 'all')) return;
+    var done = p.items.filter(function (x) { return CLOSED[eff(x)]; }).length;
+    root.appendChild(h('section.card', null,
+      h('div.card-h', null, h('h2', null, p.title), p.auto ? pill(p.auto.status) : null, h('span.sub', null, done + ' of ' + p.items.length + ' done'), h('span.spacer'), stackBar(p.items, false, '220px')),
+      p.auto ? h('div.card-b', { style: { fontSize: '12px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' } }, h('strong', null, 'PHASES.md: '), clampText(p.auto.state)) : (p.note ? h('div.card-b.subtle', { style: { fontSize: '12px', borderBottom: '1px solid var(--border)' } }, p.note) : null),
+      h('div.card-b.flush', null, h('div.tbl-wrap', null, h('table.tbl', null, h('tbody', null, items.map(function (x) {
+        return h('tr', { 'data-key': x.key, class: CLOSED[eff(x)] ? 'is-done' : null }, h('td', { style: { width: '24px' } }, doneBox(x)), h('td.t-main', { style: { width: '36%' } }, h('div.ttl', null, rich(x.title))), h('td', { style: { width: '160px' } }, statusSel(x)), h('td.w-state', null, clampText(x.state)), h('td.when', null, x.changed));
+      })))))));
+  });
+  root.appendChild(h('div.subtle', { style: { fontSize: '12px' } }, 'The feature list comes from ' + DATA_DIR + '\\data.js (optional, curated); each phase\'s status line comes from PHASES.md by itself. Your marks win over both until you reset them.'));
+  return root;
+};
+
+/* ---------- Releases & branches */
+PAGES.releases = function () {
+  var A = AUTO, live = A.live || {}, g = A.git || {}, main = g.main || {}, next = nextRelease();
+  function t(label, ic, v, small, sub) { return h('div.tile', null, h('div.tile-l', null, icon(ic), label), h('div.tile-v', null, v, small ? h('small', null, small) : null), h('div.tile-s', { title: sub }, sub)); }
+  var top = h('div.tiles', null,
+    t('Live server', 'server', live.ok ? live.version : 'down', live.ok ? 'db ' + live.db + ' · ' + (live.source || '') : '', (live.url || '') + ' · ' + fmtWhen(live.checkedAt)),
+    t('main', 'branch', main.version || '?', main.hash || '', fmtWhen(main.at) + ' · ' + (main.subject || '')),
+    (g.versions || []).map(function (v) { return t(v.label, 'download', v.value || '?', '', v.path + ' on main'); }),
+    t('Waiting to go live', 'rocket', next.length ? next.map(function (b) { return b.version; }).join(', ') : '—', '', next.length ? next.map(function (b) { return b.name; }).join(', ') : 'Nothing'),
+    t('Live lock', 'server', A.lock ? clean(A.lock.held) : '?', '', A.lock ? clean(A.lock.what) + ' · ' + A.lock.since : ''),
+    A.graph ? h('a.tile', { href: A.graph.html, target: '_blank', rel: 'noopener', title: 'Open the code map (graphify graph.html). Sessions query it instead of reading whole files.' },
+      h('div.tile-l', null, icon('branch'), 'Code map (graphify)'),
+      h('div.tile-v', { style: { fontSize: '15px' } }, A.graph.behind > 0 ? pill('wip', A.graph.behind + ' commits behind') : pill('done', 'Current'), h('small', null, A.graph.builtFrom)),
+      h('div.tile-s', null, (A.graph.stats || '') + ' · ' + (A.graph.refreshing ? 'refreshing now' : 'built ' + fmtWhen(A.graph.at)) + ' · open ↗')) : null);
+  var brCards = M.branches.map(function (b) {
+    return h('div.br', null,
+      h('div.br-top', null, h('span.br-name', null, b.name), b.version ? h('span.tag', null, 'v' + b.version) : null,
+        b.unique > 0 ? pill('code', b.unique + ' commit' + (b.unique > 1 ? 's' : '') + ' not on main') : pill('done', 'On main'),
+        b.worktree ? h('span.tag', { title: b.worktree }, b.worktree.replace(/^.*[\/\\]/, '..\\')) : null, h('span.spacer'), h('span.when', null, fmtWhen(b.at))),
+      h('div.subtle', { style: { fontSize: '12px' } }, b.subject),
+      (b.commits || []).length ? h('details', null, h('summary', null, 'Show ' + b.commits.length + ' commits'), h('div.commits', null, b.commits.map(function (l) { var p = String(l).split('|'); return h('div', null, h('span.h', null, p[0]), h('span.when', null, fmtWhen(p[1])), h('span', null, p.slice(2).join('|'))); }))) : null);
+  });
+  var sess = A.sessions || [], claims = A.claims || [];
+  return h('div.col-flex', null, top,
+    h('div.grid.g21', null,
+      card('Branches with work', 'not on main, or open in a worktree; refreshed every 2 minutes', null, h('div.card-b.flush', null, brCards.length ? brCards : h('div.empty', null, 'None.'))),
+      h('div.col-flex', null,
+        card('Sessions (COORDINATION.md)', sess.length + ' rows', null, h('div.card-b.flush', null, h('div.list', null, sess.map(function (s) { return h('div.li.wrap', null, h('span.mono', { style: { fontWeight: '600', whiteSpace: 'nowrap' } }, clean(s.name).split(' ')[0]), h('span.grow', { style: { fontSize: '12px' } }, clampText(s.role)), h('span.when', null, s.since)); })))),
+        card('File claims', claims.length + ' rows', null, h('div.card-b.flush', null, h('div.list', null, claims.map(function (c) { return h('div.li.wrap', null, h('span.grow', { style: { fontSize: '12px' } }, clampText(c.what)), h('span.tag', null, clean(c.owner).slice(0, 24)), h('span.when', null, c.since)); })))))),
+    h('div.subtle', { style: { fontSize: '12px' } }, srcFoot('coordination')));
+};
+
+/* ---------- Activity */
+PAGES.activity = function () {
+  var tab = prefs.actTab || 'log', q = prefs.actS || '';
+  var seg = h('div.seg', null, [['log', 'Coordination log (' + M.log.length + ')'], ['commits', 'Commits (' + M.commits.length + ')'], ['changes', 'Board notes (' + M.changes.length + ')']].map(function (t) {
+    return h('button', { 'aria-pressed': tab === t[0] ? 'true' : 'false', onclick: function () { prefs.actTab = t[0]; savePrefs(); render(); } }, t[1]); }));
+  var rows;
+  if (tab === 'commits') rows = M.commits.filter(function (x) { return matches(x, q) || (q && x.hash.indexOf(q) === 0); }).map(function (c) { return h('tr', { 'data-key': c.key }, h('td.when', { style: { width: '90px' } }, fmtWhen(c.at)), h('td.id', { style: { width: '70px' } }, c.hash), h('td', { style: { width: '1%' } }, c.refs ? clean(c.refs).split(',').map(function (r) { return h('span.tag', { style: { marginRight: '3px' } }, r.trim().replace('HEAD -> ', '')); }) : null), h('td.t-main', null, c.title)); });
+  else if (tab === 'changes') rows = M.changes.filter(function (x) { return matches(x, q); }).map(function (c) { return h('tr', null, h('td.when', { style: { width: '70px' } }, c.when), h('td.t-main', null, rich(c.title))); });
+  else rows = M.log.filter(function (x) { return matches(x, q); }).map(function (l) { return h('tr', { 'data-key': l.key }, h('td.when', { style: { width: '90px' } }, l.when), h('td', { style: { width: '120px' } }, h('span.tag', null, clean(l.who).slice(0, 26))), h('td.t-main', null, clampText(l.title))); });
+  return h('section.card', null, h('div.toolbar', null, seg, h('span.spacer'), localSearch('actS', 'Filter')),
+    h('div.card-b.flush', null, h('div.tbl-wrap', null, h('table.tbl', null, h('tbody', null, rows.length ? rows : h('tr', null, h('td', null, h('div.empty', null, 'Nothing matches.'))))))),
+    h('div.card-f', null, tab === 'commits' ? 'git log --all (newest 80), refreshed every 2 minutes.' : tab === 'log' ? srcFoot('coordination') : 'From data.js.'));
+};
+
+/* ---------- Search everywhere */
+PAGES.search = function () {
+  var q = (document.getElementById('q').value || '').trim();
+  var groups = [
+    ['Notebook', notesList(), 'notebook', function (n) { return n.title; }],
+    ['Queue', queueItems(), 'queue', function (x) { return (x.id ? x.id + ' · ' : '') + x.title; }],
+    ['Waiting on you', M.waiting, 'waiting'],
+    ['Requirements', M.reqs, 'reqs', function (x) { return '#' + x.id + ' ' + x.title; }],
+    ['Asks', M.asks, 'asks', function (x) { return '#' + x.id + ' ' + x.title; }],
+    ['Before rollout', M.checks, 'checks', function (x) { return '#' + x.id + ' ' + x.what; }],
+    ['Features', M.features, 'features', function (x) { return x.title + ' (' + x.phaseTitle + ')'; }],
+    ['Coordination log', M.log, 'activity', function (x) { return x.when + ' · ' + x.title; }],
+    ['Commits', M.commits, 'activity', function (x) { return x.hash + ' · ' + x.title; }]
+  ];
+  var root = h('div.col-flex'), total = 0;
+  groups.forEach(function (g) {
+    var hits = g[1].filter(function (x) { return matches(x, q) || (x.hash && x.hash.indexOf(q) === 0); });
+    if (!hits.length) return;
+    total += hits.length;
+    root.appendChild(card(g[0], hits.length + ' found', h('button.link', { onclick: function () { go(g[2]); } }, 'Open section →'), h('div.card-b.flush', null, h('div.list', null, hits.slice(0, 12).map(function (x) {
+      var e = x.kind && x.status ? eff(x) : null;
+      return h('button.li', { onclick: function () {
+        if (g[0] === 'Notebook') { go('notebook'); editing = x.id; render(); return; }
+        if (g[0] === 'Commits') { prefs.actTab = 'commits'; savePrefs(); } else if (g[0] === 'Coordination log') { prefs.actTab = 'log'; savePrefs(); }
+        if (g[2] === 'features') { prefs.featPhase = 'all'; prefs.fF = 'all'; savePrefs(); }
+        go(g[2], x.key);
+      } },
+        e ? h('span.dot', { class: 'st-' + e }) : (x.type ? typeTag(x.type, true) : h('span.dot')), h('span.grow', null, rich((g[3] || function (y) { return y.title; })(x))),
+        e ? pill(e) : (x.status && NST[x.status] ? h('span.pill', { class: 'n-' + x.status }, NST[x.status]) : null));
+    })), hits.length > 12 ? h('div.card-f', null, (hits.length - 12) + ' more in the section') : null)));
+  });
+  if (!total) root.appendChild(h('div.empty', null, 'Nothing found for "' + q + '".'));
+  return root;
+};
+
+/* ================================================================ wiring */
+function setTheme(t) { document.documentElement.setAttribute('data-theme', t); lsSet(LS_THEME, t); paintTopIcons(); }
+function paintTopIcons() {
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  function put(id, ic, text) { var b = document.getElementById(id); b.textContent = ''; b.appendChild(icon(ic)); if (text) b.appendChild(h('span', null, text)); }
+  put('themeBtn', dark ? 'sun' : 'moon'); put('densBtn', 'rows'); put('menuBtn', 'more'); put('railBtn', 'panel'); put('newBtn', 'plus', 'New note'); put('sumBtn', 'list', 'Summary');
+  var si = document.getElementById('searchIc'); si.textContent = ''; si.appendChild(icon('search'));
+}
+function exportState() {
+  var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  var a = h('a', { href: URL.createObjectURL(blob), download: 'pilot-' + SLUG + '-' + new Date().toISOString().slice(0, 10) + '.json' });
+  document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function showHelp() {
+  dialog('How this panel works', [
+    h('p', null, h('strong', null, 'It updates by itself. '), 'The task "' + TASK + '" (your Windows user, every 2 minutes) reads REQUESTS, BEFORE-ROLLOUT, PROGRESS, PHASES, COORDINATION and RESUME (the newest copy in the main folder or a worktree with unshipped work), git and the live server, and writes ' + DATA_DIR + '\\live-data.js.'+' This page reads that file every 30 seconds and redraws without losing your place. No session has to edit anything for it.'),
+    h('p', null, h('strong', null, 'Your changes stay. '), 'Ticks, statuses, queue order, rows you add and the notebook save in this browser at once. Link panel.json (bottom left) and they also go to ' + DATA_DIR + '\\panel.json.'+' Every Claude session reads that file; Claude can write answers there and they show up here.'),
+    h('p', null, h('strong', null, 'A status you set wins '), 'over the docs until you pick the doc status again (shown as "(doc)"). Items you marked have a blue ring.'),
+    h('div.keys', null,
+      h('kbd', null, '/'), 'Search everything', h('kbd', null, 'N'), 'New note', h('kbd', null, '1 … 0'), 'Go to a section',
+      h('kbd', null, 'Alt ↑ / ↓'), 'Move the focused queue row', h('kbd', null, 'Esc'), 'Close search or the editor', h('kbd', null, '?'), 'This help'),
+    h('p.subtle', null, 'Quick add: start with ! (issue), + (feature), ? (question), * (idea) or > (task). Add !p0 … !p3 for priority and #tag for tags.')
+  ]);
+}
+function wire() {
+  paintTopIcons();
+  document.documentElement.setAttribute('data-mode', mode);
+  paintModeSwitch();
+  document.getElementById('themeBtn').onclick = function () { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); };
+  document.getElementById('densBtn').onclick = function () { var d = document.documentElement.getAttribute('data-density') === 'comfy' ? 'compact' : 'comfy'; document.documentElement.setAttribute('data-density', d); lsSet(LS_DENS, d); };
+  document.getElementById('railBtn').onclick = function () { var app = document.getElementById('app'); app.classList.toggle('rail'); prefs.rail = app.classList.contains('rail'); savePrefs(); };
+  if (prefs.rail) document.getElementById('app').classList.add('rail');
+  document.getElementById('sumBtn').onclick = openSummary;
+  document.getElementById('newBtn').onclick = function () { go('notebook'); setTimeout(function () { var x = document.getElementById('quickAdd'); if (x) x.focus(); }, 40); };
+  document.getElementById('menuBtn').onclick = function (e) {
+    e.stopPropagation();
+    openMenu(document.getElementById('menuBtn'), [
+      { icon: 'link', label: fileHandle ? 'Link a different save file…' : 'Link panel.json (save file)…', fn: linkFile },
+      { icon: 'refresh', label: 'Reload the data now', fn: function () { pollLive(); syncFile(); toast('Reloading the data…'); } },
+      '-',
+      { icon: 'download', label: 'Export my notes and marks (JSON)', fn: exportState },
+      { icon: 'upload', label: 'Import and merge a JSON file…', fn: function () { document.getElementById('importFile').click(); } },
+      { icon: 'copy', label: 'Copy open notes for Claude', fn: function () { var o = sortNotes(openNotes(), 'prio'); copyText(o.map(function (n, i) { return (i + 1) + '. ' + noteText(n); }).join('\n\n')); toast('Copied ' + o.length + ' notes.'); } },
+      '-',
+      { icon: 'trash', label: 'Clear my status marks (notes stay)', fn: function () { if (!confirm('Remove every status you set by hand? Notes, row notes and the queue order stay.')) return; var t = nowIso(); for (var k in state.marks) state.marks[k] = { status: null, note: state.marks[k].note || '', updated: t, label: state.marks[k].label }; commit(); } },
+      { icon: 'help', label: 'How this panel works  (?)', fn: showHelp }
+    ]);
+  };
+  document.getElementById('importFile').onchange = function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    f.text().then(function (t) { state = mergeState(state, JSON.parse(t)); commit(); toast('Imported and merged.'); }).catch(function (err) { toast('Could not import: ' + err.message); });
+    e.target.value = '';
+  };
+  var q = document.getElementById('q');
+  q.addEventListener('input', function () {
+    if (q.value.trim()) { if (view !== 'search') prevView = view; view = 'search'; render(); }
+    else if (view === 'search') { view = prevView; render(); }
+  });
+  q.addEventListener('keydown', function (e) { if (e.key === 'Escape') { q.value = ''; if (view === 'search') { view = prevView; render(); } q.blur(); } });
+  document.addEventListener('keydown', function (e) {
+    var a = document.activeElement, typing = isTextField(a);
+    if (e.key === 'Escape' && editing && !document.querySelector('.overlay')) { editing = null; render(); return; }
+    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && view === 'queue') {
+      var tr = a && a.closest && a.closest('tr[data-key]');
+      if (tr) { e.preventDefault(); var k = tr.getAttribute('data-key'); moveInQueue(k, e.key === 'ArrowUp' ? 'up' : 'down'); setTimeout(function () { var n = document.querySelector('tr[data-key="' + (window.CSS && CSS.escape ? CSS.escape(k) : k) + '"] .chk'); if (n) n.focus(); }, 20); }
+      return;
+    }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey || document.querySelector('.overlay')) return;
+    if (e.key === '/') { e.preventDefault(); q.focus(); q.select(); }
+    else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); document.getElementById('newBtn').click(); }
+    else if (e.key === '?') { showHelp(); }
+    else if (e.key === 's' || e.key === 'S') { e.preventDefault(); openSummary(); }
+    else if (/^[0-9bq]$/.test(e.key)) { var t = null; VIEWS.forEach(function (g) { g.items.forEach(function (x) { if (x.key === e.key) t = x; }); }); if (t) go(t.id); }
+  });
+  window.addEventListener('focus', function () { pollLive(); syncAll(); });
+  setInterval(helperSync, 30000);
+  window.addEventListener('storage', function (e) { if (e.key === LS_STATE && e.newValue) { try { var m = mergeState(state, JSON.parse(e.newValue)); if (stable(m) !== stable(state)) { state = m; scheduleRender(); } } catch (x) {} } });
+  setInterval(pollLive, 30000);
+  setInterval(syncFile, 60000);
+  setInterval(updateSaveUi, 20000);
+}
+
+buildModel();
+var startView = (location.hash || '').slice(1) || prefs.view || '';
+var inMode = false; VIEWS.forEach(function (g) { g.items.forEach(function (x) { if (x.id === startView) inMode = true; }); });
+if (!PAGES[startView] || !inMode) startView = mode === 'easy' ? 'home' : 'overview';
+view = startView;
+wire();
+render();
+initFile();
+helperSync();
+pollLive();
+})();
+</script>
+</body>
+</html>
