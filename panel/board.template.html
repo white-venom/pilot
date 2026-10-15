@@ -739,6 +739,7 @@ function buildModel() {
     });
     M.phases.push(ph);
   });
+  if (!M.phases.length) (A.phaseTable || []).forEach(function (p, i) { M.phases.push({ id: 'p' + (i + 1), title: clean(p.phase), meta: clean(p.scope) + (p.estimate ? ' · ' + clean(p.estimate) : ''), note: '', auto: p, items: [] }); });
   var w = [];
   (A.waitingResume || []).forEach(function (t) { w.push({ title: t, state: '', src: 'RESUME.md' }); });
   (A.waitingReq || []).forEach(function (t) { w.push({ title: t, state: '', src: 'REQUESTS.md' }); });
@@ -1224,7 +1225,7 @@ PAGES.overview = function () {
   }
   root.appendChild(h('div.tiles', null,
     !A.live ? null : tile('Live server', 'server', live.ok ? (live.version || 'up') : 'down', live.ok ? 'db ' + live.db : '', 'Checked ' + fmtWhen(live.checkedAt) + ' · main ' + (((A.git || {}).main || {}).hash || ''), 'releases'),
-    tile('Built, not live', 'rocket', next ? next.version : '—', next ? next.unique + ' commits' : '', next ? next.name + ': ' + clean(next.subject) : 'Nothing waiting to go live', 'releases'),
+    tile('Built, not live', 'rocket', next ? next.version : '—', next ? next.unique + (next.unique === 1 ? ' commit' : ' commits') : '', next ? next.name + ': ' + clean(next.subject) : 'Nothing waiting to go live', 'releases'),
     tile('Requirements', 'target', String(reqDone), 'of ' + M.reqs.length + ' done', reqPart + ' partly · ' + (M.reqs.length - reqDone - reqPart) + ' open', 'reqs', stackBar(M.reqs)),
     tile('Your asks', 'message', String(asksClosed), 'of ' + M.asks.length + ' closed', c.asksOpen + ' still open', 'asks', stackBar(M.asks)),
     tile('Queue', 'queue', String(qOpen.length), 'open', qOpen[0] ? 'Now: ' + clean((qOpen[0].id ? qOpen[0].id + ' ' : '') + qOpen[0].title) : 'Queue empty', 'queue', stackBar(qAll)),
@@ -1256,7 +1257,7 @@ PAGES.overview = function () {
     var done = p.items.filter(function (x) { return CLOSED[eff(x)]; }).length;
     return h('button.phase-row', { onclick: function () { prefs.featPhase = p.id; savePrefs(); go('features'); } },
       h('div.phase-top', null, h('span.name', null, p.title.replace(/^Phase (\d): /, 'P$1 · ')), p.auto ? pill(p.auto.status) : null,
-        h('span.meta', { title: p.auto ? clean(p.auto.state) : p.meta }, p.auto ? clean(p.auto.state).slice(0, 160) : p.meta), h('span.count', null, done + '/' + p.items.length)),
+        h('span.meta', { title: p.auto ? clean(p.auto.state) : p.meta }, p.auto ? clean(p.auto.state).slice(0, 160) : p.meta), h('span.count', null, p.items.length ? done + '/' + p.items.length : '')),
       stackBar(p.items, true));
   }));
   var mx = h('div.matrix', null, M.reqs.map(function (r) {
